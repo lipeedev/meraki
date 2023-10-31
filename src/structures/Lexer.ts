@@ -40,7 +40,7 @@ export class Lexer {
   }
 
   private isStringChar(char: string): boolean {
-    return /[^"]/.test(char);
+    return char === '"' || char === "'";
   }
 
   private isWhitespace(char: string): boolean {
@@ -80,15 +80,23 @@ export class Lexer {
   private lexString(): void {
     let value = '';
 
+    const stringChar = this.currentChar;
     this.advance();
 
-    while (this.isStringChar(this.currentChar)) {
+    while (this.currentChar !== stringChar && !this.isEOF) {
       value += this.currentChar;
       this.advance();
     }
 
-    this.advance();
+    if (this.currentChar !== stringChar) {
+      sendError({
+        message: `Unterminated string`,
+        line: this.line,
+        column: this.column
+      })
+    }
 
+    this.advance();
     this.addToken(TokenType.String, value);
   }
 
@@ -131,7 +139,7 @@ export class Lexer {
         continue;
       }
 
-      if (this.currentChar === '"' || this.currentChar === "'") {
+      if (this.isStringChar(this.currentChar)) {
         this.lexString();
         continue;
       }

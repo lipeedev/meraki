@@ -1,6 +1,6 @@
 import "IO"
 
 function main() {
-  var name = "lipe" 
+  var name = 'lipe'                              
   IO.print("Hello world")  
-}
+}   
