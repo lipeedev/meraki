@@ -72,6 +72,43 @@ export class Visitor {
     });
   }
 
+  private manageVariableAssignment(node: ASTNode) {
+    const variable = this.variables.find(variable => variable.name === node.variableAssignmentValue?.name);
+
+    if (!variable) {
+      return sendError({
+        message: `Variable "${node.variableAssignmentValue?.name}" not found`,
+        line: node.line,
+        column: node.column
+      })
+    }
+
+    if (node.variableAssignmentValue?.type !== variable.type && node.variableAssignmentValue?.type !== TokenType.Identifier) {
+      return sendError({
+        message: `Variable "${variable.name}" is of type "${variable.type}" and cannot be assigned to a value of type "${node.variableAssignmentValue?.type}"`,
+        line: node.line,
+        column: node.column
+      })
+    }
+
+    if (node.variableAssignmentValue?.type === TokenType.Identifier) {
+      const variableToAssign = this.variables.find(variable => variable.name === node.variableAssignmentValue?.value);
+
+      if (!variableToAssign) {
+        return sendError({
+          message: `Variable "${node.variableAssignmentValue?.value}" not found`,
+          line: node.line,
+          column: node.column
+        })
+      }
+
+      variable.value = variableToAssign.value;
+      return;
+    }
+
+    variable.value = node.variableAssignmentValue?.value!;
+  }
+
   public visit() {
     for (const node of this.astNodes) {
 
@@ -81,6 +118,10 @@ export class Visitor {
 
       if (node.isVariableDeclaration) {
         this.manageVariableDeclaration(node);
+      }
+
+      if (node.isVariableAssignment) {
+        this.manageVariableAssignment(node);
       }
 
       // TODO: Add more cases

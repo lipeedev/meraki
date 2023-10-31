@@ -2,6 +2,7 @@ import "IO"
 
 function main() {
   var name = 'lipe'        
-  name = 'lipe2'
+  var newName = 'lupe'
+  name = newName
   IO.print(name)
 }   
