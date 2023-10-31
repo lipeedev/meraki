@@ -3,5 +3,5 @@ import "IO"
 function main() {
   var name = 'lipe'        
   name = 'lipe2'
-  IO.print("hey")
+  IO.print(name)
 }   

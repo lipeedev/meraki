@@ -1,15 +1,24 @@
 import { sendError } from '../utils/sendError';
 import { ASTNode } from './AST';
+import { TokenType } from './Token';
 
-type importModule = {
+export type ImportModule = {
   name: string,
   exports: any
 }
 
-export class Visitor {
-  constructor(private astNodes: ASTNode[], private importModules?: importModule[]) { }
+export type Variable = {
+  name: string,
+  value: any,
+  type: TokenType
+}
 
-  private manageModuleAccessFieldFunctionCall(node: ASTNode, myModule: importModule) {
+export class Visitor {
+  private variables: Variable[] = [];
+
+  constructor(private astNodes: ASTNode[], private importModules?: ImportModule[]) { }
+
+  private manageModuleAccessFieldFunctionCall(node: ASTNode, myModule: ImportModule) {
     const functionInAst = this.astNodes.find(_node => _node.isFunctionCall && _node.functionCallValue?.name === (node.moduleAccessFieldValue?.field) as string);
     const functionCall = myModule?.exports[node.moduleAccessFieldValue?.field as string];
 
@@ -21,8 +30,8 @@ export class Visitor {
       });
     }
 
-    const args = functionInAst?.functionCallValue?.args;
-    functionCall(...args as any[]);
+    const args = functionInAst?.functionCallValue?.args!;
+    functionCall(this.variables, args);
   }
 
   private manageModuleAccessField(node: ASTNode) {
@@ -39,17 +48,39 @@ export class Visitor {
     const isModuleAcessFieldFunctionCall = node.isFunctionCall && node.isModuleAccessField;
 
     if (isModuleAcessFieldFunctionCall) {
-      this.manageModuleAccessFieldFunctionCall(node, myModule as importModule);
+      this.manageModuleAccessFieldFunctionCall(node, myModule as ImportModule);
     }
 
+    //TODO: static module fields access
+  }
+
+  private manageVariableDeclaration(node: ASTNode) {
+    const variableAlreadyExists = this.variables.some(variable => variable.name === node.variableDeclarationValue?.name);
+
+    if (variableAlreadyExists) {
+      sendError({
+        message: `Variable "${node.variableDeclarationValue?.name}" already exists`,
+        line: node.line,
+        column: node.column
+      })
+    }
+
+    this.variables.push({
+      name: node.variableDeclarationValue?.name as string,
+      value: node.variableDeclarationValue?.value,
+      type: node.variableDeclarationValue?.type as TokenType
+    });
   }
 
   public visit() {
     for (const node of this.astNodes) {
 
-      //module Access Field
       if (node.isModuleAccessField) {
         this.manageModuleAccessField(node)
+      }
+
+      if (node.isVariableDeclaration) {
+        this.manageVariableDeclaration(node);
       }
 
       // TODO: Add more cases
