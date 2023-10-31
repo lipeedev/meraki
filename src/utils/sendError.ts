@@ -5,7 +5,7 @@ type sendErrorParams = {
 }
 
 export function sendError({ message, line, column }: sendErrorParams) {
-  console.log(`ERROR: ${message} [${line}:${column}]`);
-  console.log(`Exiting...`)
-  process.exit(1);
+    console.log(`ERROR: ${message} [${line}:${column}]`);
+    console.log('Exiting...');
+    process.exit(1);
 }

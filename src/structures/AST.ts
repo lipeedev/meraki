@@ -1,4 +1,4 @@
-import { Token, TokenType } from "./Token";
+import { Token, TokenType } from './Token';
 
 export enum ASTNodeType {
   FunctionDeclaration,

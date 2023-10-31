@@ -1,4 +1,4 @@
 export default {
-  variableDeclaration: 'var',
-  functionDeclaration: 'function',
+    variableDeclaration: 'var',
+    functionDeclaration: 'function',
 };
