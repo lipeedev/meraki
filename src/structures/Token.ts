@@ -5,7 +5,8 @@ export enum TokenType {
   RightParen,
   LeftCurly,
   RightCurly,
-  Dot
+  Dot,
+  Equals
 }
 
 export interface Token {

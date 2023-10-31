@@ -1,5 +1,6 @@
 import "IO"
 
-function main() { 
-  pinto.oi("Hello world")  
+function main() {
+  var name = "lipe" 
+  IO.print("Hello world")  
 }

@@ -2,6 +2,7 @@ import path from "path";
 import { sendError } from "../utils/sendError";
 import { Token, TokenType } from "./Token";
 import { ASTNode } from "./AST";
+import keywords from "../utils/keywords";
 
 export class Parser {
   private internalPath = path.resolve(__dirname, '..', 'internal')
@@ -130,7 +131,7 @@ export class Parser {
     const nextToken = this.getNextToken(token);
 
     return (token.type === TokenType.Identifier && nextToken.type === TokenType.LeftParen)
-      && this.getPreviousToken(token).value !== 'function';
+      && this.getPreviousToken(token).value !== keywords.functionDeclaration;
   }
 
   private parseFunctionCall(token: Token) {
@@ -241,6 +242,46 @@ export class Parser {
 
   }
 
+  private isVariableDeclaration(token: Token) {
+    const nextToken = this.getNextToken(token);
+    return token.type === TokenType.Identifier && token.value === keywords.variableDeclaration && nextToken.type === TokenType.Identifier;
+  }
+
+  private parseVariableDeclaration(token: Token) {
+    const nameToken = this.getNextToken(token);
+    const nextTokenAfterName = this.getNextToken(nameToken);
+
+    if (nextTokenAfterName.type !== TokenType.Equals) {
+      sendError({
+        message: `Expected "=" after variable name, got "${nextTokenAfterName.value}" instead`,
+        line: nextTokenAfterName.line,
+        column: nextTokenAfterName.column,
+      })
+    }
+
+    const nextTokenAfterEquals = this.getNextToken(nextTokenAfterName);
+
+    if ([TokenType.Identifier, TokenType.String].indexOf(nextTokenAfterEquals.type) === -1) {
+      sendError({
+        message: `Expected a valid value after "=", got "${nextTokenAfterEquals.value}" instead`,
+        line: nextTokenAfterEquals.line,
+        column: nextTokenAfterEquals.column,
+      })
+    }
+
+    this.astNodes.push({
+      isVariableDeclaration: true,
+      column: token.column,
+      line: token.line,
+      variableDeclarationValue: {
+        name: nameToken.value,
+        value: nextTokenAfterEquals.value,
+        type: nextTokenAfterEquals.type
+      }
+    })
+
+  }
+
   public async parse() {
     while (!this.isEndOfTokens) {
       const currentToken = this.tokens[this.position];
@@ -258,7 +299,11 @@ export class Parser {
       }
 
       else if (this.isModuleAccessField(currentToken)) {
-        this.parseModuleAccessField(currentToken);
+        await this.parseModuleAccessField(currentToken);
+      }
+
+      else if (this.isVariableDeclaration(currentToken)) {
+        this.parseVariableDeclaration(currentToken);
       }
 
       this.advance();

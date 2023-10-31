@@ -35,6 +35,10 @@ export class Lexer {
     return /[a-zA-Z0-9_]/.test(char);
   }
 
+  private isEquals(char: string): boolean {
+    return /=/.test(char);
+  }
+
   private isStringChar(char: string): boolean {
     return /[^"]/.test(char);
   }
@@ -66,6 +70,11 @@ export class Lexer {
     }
 
     this.addToken(TokenType.Identifier, value);
+  }
+
+  private lexEquals(): void {
+    this.advance();
+    this.addToken(TokenType.Equals, '=');
   }
 
   private lexString(): void {
@@ -150,6 +159,11 @@ export class Lexer {
 
       if (this.currentChar === '}') {
         this.lexRightCurly();
+        continue;
+      }
+
+      if (this.isEquals(this.currentChar)) {
+        this.lexEquals();
         continue;
       }
 

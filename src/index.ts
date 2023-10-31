@@ -11,4 +11,5 @@ const parser = new Parser(lexer.lex())
 parser.parse().then(({ astNodes, importModules }) => {
   const visitor = new Visitor(astNodes, importModules)
   visitor.visit()
+  console.log(astNodes)
 })

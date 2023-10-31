@@ -1,4 +1,4 @@
-import { Token } from "./Token";
+import { Token, TokenType } from "./Token";
 
 export enum ASTNodeType {
   FunctionDeclaration,
@@ -22,13 +22,21 @@ export type ModuleAccessFieldValue = {
   isFunctionCall: boolean
 }
 
+export type VariableDeclarationValue = {
+  name: string,
+  value: string,
+  type: TokenType
+}
+
 export interface ASTNode {
   isFunctionCall?: boolean;
   isModuleAccessField?: boolean;
   isFunctionDeclaration?: boolean;
+  isVariableDeclaration?: boolean;
   functionCallValue?: FunctionCallValue;
   moduleAccessFieldValue?: ModuleAccessFieldValue;
   functionDeclarationValue?: FunctionDeclarationValue;
+  variableDeclarationValue?: VariableDeclarationValue;
   line: number;
   column: number;
 }
