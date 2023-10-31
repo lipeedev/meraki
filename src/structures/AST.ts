@@ -28,15 +28,23 @@ export type VariableDeclarationValue = {
   type: TokenType
 }
 
+export type VariableAssignmentValue = {
+  name: string,
+  value: string,
+  type: TokenType
+}
+
 export interface ASTNode {
   isFunctionCall?: boolean;
   isModuleAccessField?: boolean;
   isFunctionDeclaration?: boolean;
   isVariableDeclaration?: boolean;
+  isVariableAssignment?: boolean;
   functionCallValue?: FunctionCallValue;
   moduleAccessFieldValue?: ModuleAccessFieldValue;
   functionDeclarationValue?: FunctionDeclarationValue;
   variableDeclarationValue?: VariableDeclarationValue;
+  variableAssignmentValue?: VariableAssignmentValue;
   line: number;
   column: number;
 }
