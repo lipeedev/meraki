@@ -44,7 +44,6 @@ export class Visitor {
   }
 
   private manageModuleAccessFieldFunctionCall(node: ASTNode, myModule: ImportModule) {
-    const functionInAst = this.astNodes.find(_node => _node.isFunctionCall && _node.functionCallValue?.name === (node.moduleAccessFieldValue?.field) as string);
     const functionCall = myModule?.exports[node.moduleAccessFieldValue?.field as string];
 
     if (!functionCall) {
@@ -55,14 +54,22 @@ export class Visitor {
       });
     }
 
-    const args = functionInAst?.functionCallValue?.args!;
+    let args: Token[];
+
+    if (!node.localScope) {
+      args = this.astNodes.find(_node => !_node.localScope && _node.isFunctionCall && _node.isModuleAccessField && _node.functionCallValue?.name === node.functionCallValue?.name)?.functionCallValue?.args!;
+    }
+    else {
+      args = this.astNodes.find(_node => _node.localScope?.name === node.localScope?.name && _node.isFunctionCall && _node.isModuleAccessField && _node.functionCallValue?.name === node.functionCallValue?.name)?.functionCallValue?.args!;
+    }
+
     functionCall(this.variables, args);
   }
 
   private manageModuleAccessField(node: ASTNode) {
     const myModule = this.importModules?.find(mod => mod.name === node.moduleAccessFieldValue?.name);
 
-    if (!module) {
+    if (!myModule) {
       sendError({
         message: `Module ${node.moduleAccessFieldValue?.name} not found`,
         line: node.line,

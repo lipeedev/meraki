@@ -8,3 +8,4 @@ function secondary() {
   IO.print("hello from secondary")
 }
 
+IO.print("outside function")
