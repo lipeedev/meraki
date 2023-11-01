@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+exec < /dev/tty && [ -z "$(cat ${1})" ] && pnpm exec cz --hook || true
