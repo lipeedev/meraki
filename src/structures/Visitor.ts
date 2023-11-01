@@ -1,3 +1,4 @@
+import isArrayEquals from '../utils/isArrayEquals';
 import { sendError } from '../utils/sendError';
 import { ASTNode } from './AST';
 import { Parser } from './Parser';
@@ -21,202 +22,202 @@ export type FunctionDeclaration = {
 }
 
 export class Visitor {
-    private variables: Variable[] = [];
-    private functionDeclarationList: FunctionDeclaration[] = [];
-    private astNodes: ASTNode[];
-    private importModules?: ImportModule[];
-    private position = 0;
+  private variables: Variable[] = [];
+  private functionDeclarationList: FunctionDeclaration[] = [];
+  private astNodes: ASTNode[];
+  private importModules?: ImportModule[];
+  private position = 0;
 
-    constructor(astNodes: ASTNode[], importModules?: ImportModule[], functionDeclarationList?: FunctionDeclaration[]) {
-        this.astNodes = astNodes;
-        this.importModules = importModules;
-        this.functionDeclarationList = functionDeclarationList ?? [];
+  constructor(astNodes: ASTNode[], importModules?: ImportModule[], functionDeclarationList?: FunctionDeclaration[]) {
+    this.astNodes = astNodes;
+    this.importModules = importModules;
+    this.functionDeclarationList = functionDeclarationList ?? [];
+  }
+
+  private get isEndOfAST() {
+    return this.position >= this.astNodes.length;
+  }
+
+  private getCurrentNode() {
+    return this.astNodes[this.position];
+  }
+
+  private advance() {
+    this.position++;
+  }
+
+  private manageModuleAccessFieldFunctionCall(node: ASTNode, myModule: ImportModule) {
+    const functionCall = myModule?.exports[node.moduleAccessFieldValue?.field as string];
+
+    if (!functionCall) {
+      sendError({
+        message: `Function "${node.moduleAccessFieldValue?.field}" not found in module "${node.moduleAccessFieldValue?.name}"`,
+        line: node.line,
+        column: node.column
+      });
     }
 
-    private get isEndOfAST() {
-        return this.position >= this.astNodes.length;
+    let args: Token[];
+
+    if (!node.localScope) {
+      args = this.astNodes.find(_node => !_node.localScope && _node.isFunctionCall && _node.isModuleAccessField && _node.functionCallValue?.name === node.functionCallValue?.name && isArrayEquals(_node.functionCallValue?.args!, node.functionCallValue?.args!))?.functionCallValue?.args!;
+    }
+    else {
+      args = this.astNodes.find(_node => _node.localScope?.name === node.localScope?.name && _node.isFunctionCall && _node.isModuleAccessField && _node.functionCallValue?.name === node.functionCallValue?.name && isArrayEquals(_node.functionCallValue?.args!, node.functionCallValue?.args!))?.functionCallValue?.args!;
     }
 
-    private getCurrentNode() {
-        return this.astNodes[this.position];
+    functionCall(this.variables, args);
+  }
+
+  private manageModuleAccessField(node: ASTNode) {
+    const myModule = this.importModules?.find(mod => mod.name === node.moduleAccessFieldValue?.name);
+
+    if (!myModule) {
+      sendError({
+        message: `Module ${node.moduleAccessFieldValue?.name} not found`,
+        line: node.line,
+        column: node.column
+      });
     }
 
-    private advance() {
-        this.position++;
+    const isModuleAcessFieldFunctionCall = node.isFunctionCall && node.isModuleAccessField;
+
+    if (isModuleAcessFieldFunctionCall) {
+      this.manageModuleAccessFieldFunctionCall(node, myModule as ImportModule);
     }
-
-    private manageModuleAccessFieldFunctionCall(node: ASTNode, myModule: ImportModule) {
-        const functionCall = myModule?.exports[node.moduleAccessFieldValue?.field as string];
-
-        if (!functionCall) {
-            sendError({
-                message: `Function "${node.moduleAccessFieldValue?.field}" not found in module "${node.moduleAccessFieldValue?.name}"`,
-                line: node.line,
-                column: node.column
-            });
-        }
-
-        let args: Token[];
-
-        if (!node.localScope) {
-            args = this.astNodes.find(_node => !_node.localScope && _node.isFunctionCall && _node.isModuleAccessField && _node.functionCallValue?.name === node.functionCallValue?.name)?.functionCallValue?.args!;
-        }
-        else {
-            args = this.astNodes.find(_node => _node.localScope?.name === node.localScope?.name && _node.isFunctionCall && _node.isModuleAccessField && _node.functionCallValue?.name === node.functionCallValue?.name)?.functionCallValue?.args!;
-        }
-
-        functionCall(this.variables, args);
-    }
-
-    private manageModuleAccessField(node: ASTNode) {
-        const myModule = this.importModules?.find(mod => mod.name === node.moduleAccessFieldValue?.name);
-
-        if (!myModule) {
-            sendError({
-                message: `Module ${node.moduleAccessFieldValue?.name} not found`,
-                line: node.line,
-                column: node.column
-            });
-        }
-
-        const isModuleAcessFieldFunctionCall = node.isFunctionCall && node.isModuleAccessField;
-
-        if (isModuleAcessFieldFunctionCall) {
-            this.manageModuleAccessFieldFunctionCall(node, myModule as ImportModule);
-        }
 
     //TODO: static module fields access
+  }
+
+  private manageVariableDeclaration(node: ASTNode) {
+    const variableAlreadyExists = this.variables.some(variable => variable.name === node.variableDeclarationValue?.name);
+
+    if (variableAlreadyExists) {
+      sendError({
+        message: `Variable "${node.variableDeclarationValue?.name}" already exists`,
+        line: node.line,
+        column: node.column
+      });
     }
 
-    private manageVariableDeclaration(node: ASTNode) {
-        const variableAlreadyExists = this.variables.some(variable => variable.name === node.variableDeclarationValue?.name);
+    this.variables.push({
+      name: node.variableDeclarationValue?.name as string,
+      value: node.variableDeclarationValue?.value,
+      type: node.variableDeclarationValue?.type as TokenType
+    });
+  }
 
-        if (variableAlreadyExists) {
-            sendError({
-                message: `Variable "${node.variableDeclarationValue?.name}" already exists`,
-                line: node.line,
-                column: node.column
-            });
-        }
+  private manageVariableAssignment(node: ASTNode) {
+    const variable = this.variables.find(variable => variable.name === node.variableAssignmentValue?.name);
 
-        this.variables.push({
-            name: node.variableDeclarationValue?.name as string,
-            value: node.variableDeclarationValue?.value,
-            type: node.variableDeclarationValue?.type as TokenType
+    if (!variable) {
+      return sendError({
+        message: `Variable "${node.variableAssignmentValue?.name}" not found`,
+        line: node.line,
+        column: node.column
+      });
+    }
+
+    if (node.variableAssignmentValue?.type !== variable.type && node.variableAssignmentValue?.type !== TokenType.Identifier) {
+      return sendError({
+        message: `Variable "${variable.name}" is of type "${variable.type}" and cannot be assigned to a value of type "${node.variableAssignmentValue?.type}"`,
+        line: node.line,
+        column: node.column
+      });
+    }
+
+    if (node.variableAssignmentValue?.type === TokenType.Identifier) {
+      const variableToAssign = this.variables.find(variable => variable.name === node.variableAssignmentValue?.value);
+
+      if (!variableToAssign) {
+        return sendError({
+          message: `Variable "${node.variableAssignmentValue?.value}" not found`,
+          line: node.line,
+          column: node.column
         });
+      }
+
+      variable.value = variableToAssign.value;
+      return;
     }
 
-    private manageVariableAssignment(node: ASTNode) {
-        const variable = this.variables.find(variable => variable.name === node.variableAssignmentValue?.name);
+    variable.value = node.variableAssignmentValue?.value!;
+  }
 
-        if (!variable) {
-            return sendError({
-                message: `Variable "${node.variableAssignmentValue?.name}" not found`,
-                line: node.line,
-                column: node.column
-            });
-        }
+  private async manageFunctionDeclaration(node: ASTNode) {
+    const functionAlreadyExists = this.functionDeclarationList.some(func => func.name === node.functionDeclarationValue?.name);
 
-        if (node.variableAssignmentValue?.type !== variable.type && node.variableAssignmentValue?.type !== TokenType.Identifier) {
-            return sendError({
-                message: `Variable "${variable.name}" is of type "${variable.type}" and cannot be assigned to a value of type "${node.variableAssignmentValue?.type}"`,
-                line: node.line,
-                column: node.column
-            });
-        }
-
-        if (node.variableAssignmentValue?.type === TokenType.Identifier) {
-            const variableToAssign = this.variables.find(variable => variable.name === node.variableAssignmentValue?.value);
-
-            if (!variableToAssign) {
-                return sendError({
-                    message: `Variable "${node.variableAssignmentValue?.value}" not found`,
-                    line: node.line,
-                    column: node.column
-                });
-            }
-
-            variable.value = variableToAssign.value;
-            return;
-        }
-
-        variable.value = node.variableAssignmentValue?.value!;
+    if (functionAlreadyExists) {
+      return sendError({
+        message: `Function "${node.functionDeclarationValue?.name}" already exists`,
+        line: node.line,
+        column: node.column
+      });
     }
 
-    private async manageFunctionDeclaration(node: ASTNode) {
-        const functionAlreadyExists = this.functionDeclarationList.some(func => func.name === node.functionDeclarationValue?.name);
+    const functionBodyParser = new Parser(node.functionDeclarationValue?.body!);
+    const functionBodyParsed = await functionBodyParser.parse();
 
-        if (functionAlreadyExists) {
-            return sendError({
-                message: `Function "${node.functionDeclarationValue?.name}" already exists`,
-                line: node.line,
-                column: node.column
-            });
-        }
+    this.functionDeclarationList.push({
+      name: node.functionDeclarationValue?.name!,
+      body: functionBodyParsed.astNodes,
+    });
 
-        const functionBodyParser = new Parser(node.functionDeclarationValue?.body!);
-        const functionBodyParsed = await functionBodyParser.parse();
+    const firstNodeOutsideFunctionBody = this.astNodes.find((_node, index) => _node.localScope?.name !== node.functionDeclarationValue?.name && index > this.astNodes.indexOf(node));
 
-        this.functionDeclarationList.push({
-            name: node.functionDeclarationValue?.name!,
-            body: functionBodyParsed.astNodes,
-        });
+    if (firstNodeOutsideFunctionBody) {
+      this.position = this.astNodes.indexOf(firstNodeOutsideFunctionBody) - 1;
+    }
+    else {
+      this.position = this.astNodes.length;
+    }
+  }
 
-        const firstNodeOutsideFunctionBody = this.astNodes.find((_node, index) => _node.localScope?.name !== node.functionDeclarationValue?.name && index > this.astNodes.indexOf(node));
+  private manageFunctionCall(node: ASTNode) {
+    const functionDeclaration = this.functionDeclarationList.find(func => func.name === node.functionCallValue?.name);
 
-        if (firstNodeOutsideFunctionBody) {
-            this.position = this.astNodes.indexOf(firstNodeOutsideFunctionBody) - 1;
-        }
-        else {
-            this.position = this.astNodes.length;
-        }
+    if (!functionDeclaration) {
+      return sendError({
+        message: `Function "${node.functionCallValue?.name}" not found`,
+        line: node.line,
+        column: node.column
+      });
     }
 
-    private manageFunctionCall(node: ASTNode) {
-        const functionDeclaration = this.functionDeclarationList.find(func => func.name === node.functionCallValue?.name);
+    new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList).visit();
 
-        if (!functionDeclaration) {
-            return sendError({
-                message: `Function "${node.functionCallValue?.name}" not found`,
-                line: node.line,
-                column: node.column
-            });
-        }
+  }
 
-        new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList).visit();
+  public async visit() {
+    while (!this.isEndOfAST) {
+      const node = this.getCurrentNode();
 
+      if (node.isModuleAccessField) {
+        this.manageModuleAccessField(node);
+        this.advance();
+      }
+
+      if (node.isVariableDeclaration) {
+        this.manageVariableDeclaration(node);
+        this.advance();
+      }
+
+      if (node.isVariableAssignment) {
+        this.manageVariableAssignment(node);
+        this.advance();
+      }
+
+      if (node.isFunctionDeclaration) {
+        await this.manageFunctionDeclaration(node);
+        this.advance();
+      }
+
+      if (node.isFunctionCall && !node.isModuleAccessField) {
+        this.manageFunctionCall(node);
+        this.advance();
+      }
+
+      // TODO: Add more cases
     }
-
-    public async visit() {
-        while (!this.isEndOfAST) {
-            const node = this.getCurrentNode();
-
-            if (node.isModuleAccessField) {
-                this.manageModuleAccessField(node);
-                this.advance();
-            }
-
-            if (node.isVariableDeclaration) {
-                this.manageVariableDeclaration(node);
-                this.advance();
-            }
-
-            if (node.isVariableAssignment) {
-                this.manageVariableAssignment(node);
-                this.advance();
-            }
-
-            if (node.isFunctionDeclaration) {
-                await this.manageFunctionDeclaration(node);
-                this.advance();
-            }
-
-            if (node.isFunctionCall && !node.isModuleAccessField) {
-                this.manageFunctionCall(node);
-                this.advance();
-            }
-
-            // TODO: Add more cases
-        }
-    }
+  }
 }
