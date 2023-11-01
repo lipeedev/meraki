@@ -1,5 +1,6 @@
 import { sendError } from '../utils/sendError';
 import { ASTNode } from './AST';
+import { Parser } from './Parser';
 import { Token, TokenType } from './Token';
 
 export type ImportModule = {
@@ -26,9 +27,10 @@ export class Visitor {
   private importModules?: ImportModule[];
   private position = 0;
 
-  constructor(astNodes: ASTNode[], importModules?: ImportModule[]) {
+  constructor(astNodes: ASTNode[], importModules?: ImportModule[], functionDeclarationList?: FunctionDeclaration[]) {
     this.astNodes = astNodes;
     this.importModules = importModules;
+    this.functionDeclarationList = functionDeclarationList ?? []
   }
 
   private get isEndOfAST() {
@@ -141,7 +143,7 @@ export class Visitor {
     variable.value = node.variableAssignmentValue?.value!;
   }
 
-  private manageFunctionDeclaration(node: ASTNode) {
+  private async manageFunctionDeclaration(node: ASTNode) {
     const functionAlreadyExists = this.functionDeclarationList.some(func => func.name === node.functionDeclarationValue?.name);
 
     if (functionAlreadyExists) {
@@ -152,10 +154,13 @@ export class Visitor {
       })
     }
 
+    const functionBodyParser = new Parser(node.functionDeclarationValue?.body!)
+    const functionBodyParsed = await functionBodyParser.parse();
+
     this.functionDeclarationList.push({
       name: node.functionDeclarationValue?.name!,
-      body: node.functionDeclarationValue?.body!
-    });
+      body: functionBodyParsed.astNodes,
+    })
 
     const firstNodeOutsideFunctionBody = this.astNodes.find((_node, index) => _node.localScope?.name !== node.functionDeclarationValue?.name && index > this.astNodes.indexOf(node));
 
@@ -167,7 +172,22 @@ export class Visitor {
     }
   }
 
-  public visit() {
+  private manageFunctionCall(node: ASTNode) {
+    const functionDeclaration = this.functionDeclarationList.find(func => func.name === node.functionCallValue?.name);
+
+    if (!functionDeclaration) {
+      return sendError({
+        message: `Function "${node.functionCallValue?.name}" not found`,
+        line: node.line,
+        column: node.column
+      })
+    }
+
+    new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList).visit();
+
+  }
+
+  public async visit() {
     while (!this.isEndOfAST) {
       const node = this.getCurrentNode();
 
@@ -177,8 +197,8 @@ export class Visitor {
       }
 
       if (node.isVariableDeclaration) {
-        this.manageVariableDeclaration(node);
-        this.advance();
+        this.manageVariableDeclaration(node)
+        this.advance()
       }
 
       if (node.isVariableAssignment) {
@@ -187,7 +207,12 @@ export class Visitor {
       }
 
       if (node.isFunctionDeclaration) {
-        this.manageFunctionDeclaration(node);
+        await this.manageFunctionDeclaration(node)
+        this.advance();
+      }
+
+      if (node.isFunctionCall && !node.isModuleAccessField) {
+        this.manageFunctionCall(node);
         this.advance();
       }
 

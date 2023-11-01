@@ -5,7 +5,9 @@ function main() {
 } 
 
 function secondary() {
-  IO.print("hello from secondary")
+  IO.print("oi")
 }
 
 IO.print("outside function")
+secondary()
+main()
