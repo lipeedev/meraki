@@ -12,7 +12,8 @@ export type ImportModule = {
 export type Variable = {
   name: string,
   value: any,
-  type: TokenType
+  type: TokenType,
+  isFunctionCall?: boolean
 }
 
 export type FunctionDeclaration = {
@@ -21,8 +22,24 @@ export type FunctionDeclaration = {
   body: ASTNode[]
 }
 
+export type FunctionReturnData = {
+  line: number,
+  column: number,
+  name: string,
+  returnValue?: any
+}
+
+export type ModuleFunctionCallParams = {
+  functionsReturn: FunctionReturnData[],
+  variables: Variable[],
+  args: Token[],
+  line: number,
+  column: number
+}
+
 export class Visitor {
   private variables: Variable[] = [];
+  private functionReturnList: FunctionReturnData[] = []
   private functionDeclarationList: FunctionDeclaration[] = [];
   private astNodes: ASTNode[];
   private importModules?: ImportModule[];
@@ -47,7 +64,7 @@ export class Visitor {
   }
 
   private manageModuleAccessFieldFunctionCall(node: ASTNode, myModule: ImportModule) {
-    const functionCall = myModule?.exports[node.moduleAccessFieldValue?.field as string];
+    const functionCall = myModule?.exports[node.moduleAccessFieldValue?.field as string] as (param: ModuleFunctionCallParams) => any;
 
     if (!functionCall) {
       sendError({
@@ -66,7 +83,23 @@ export class Visitor {
       args = this.astNodes.find(_node => _node.localScope?.name === node.localScope?.name && _node.isFunctionCall && _node.isModuleAccessField && _node.functionCallValue?.name === node.functionCallValue?.name && isArrayEquals(_node.functionCallValue?.args!, node.functionCallValue?.args!))?.functionCallValue?.args!;
     }
 
-    functionCall(this.variables, args);
+    const functionAfterCall = functionCall({
+      functionsReturn: this.functionReturnList,
+      variables: this.variables,
+      args: args!,
+      line: node.line,
+      column: node.column
+    })
+
+    if (functionAfterCall?.returnValue) {
+      this.functionReturnList.push({
+        name: node.functionCallValue?.name!,
+        line: node.line,
+        column: node.column,
+        returnValue: functionAfterCall.returnValue
+      })
+    }
+
   }
 
   private manageModuleAccessField(node: ASTNode) {
@@ -103,7 +136,8 @@ export class Visitor {
     this.variables.push({
       name: node.variableDeclarationValue?.name as string,
       value: node.variableDeclarationValue?.value,
-      type: node.variableDeclarationValue?.type as TokenType
+      type: node.variableDeclarationValue?.type as TokenType,
+      isFunctionCall: node.isFunctionCall
     });
   }
 
@@ -212,7 +246,7 @@ export class Visitor {
         this.advance();
       }
 
-      if (node.isFunctionCall && !node.isModuleAccessField) {
+      if (node.isFunctionCall && !node.isModuleAccessField && !node.isVariableDeclaration) {
         this.manageFunctionCall(node);
         this.advance();
       }
