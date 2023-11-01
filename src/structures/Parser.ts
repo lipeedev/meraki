@@ -153,6 +153,7 @@ export class Parser {
       }
     }
 
+    console.log(nextToken)
     if (nextToken.type !== TokenType.RightParen) {
       sendError({
         message: `Expected ")" after "(", got "${nextToken.value}" instead`,
@@ -323,7 +324,7 @@ export class Parser {
         this.parseFunctionDefinition(currentToken);
       }
 
-      else if (this.isFunctionCall(currentToken) && !this.isModuleFunctionCall) {
+      else if (this.isFunctionCall(currentToken) && !this.isModuleFunctionCall(currentToken)) {
         this.parseFunctionCall(currentToken);
       }
 
