@@ -1,7 +1,7 @@
 import path from 'path';
 import { sendError } from '../utils/sendError';
 import { Token, TokenType } from './Token';
-import { ASTNode } from './AST';
+import { ASTNode, ModuleAccessFieldValue } from './AST';
 import keywords from '../utils/keywords';
 
 export class Parser {
@@ -103,18 +103,36 @@ export class Parser {
       });
     }
 
-    let indexOfFunctionBodyStart = this.tokens.indexOf(nextTokenAfterRightParen) + 1;
-    const functionBodyTokens: Token[] = [];
+    if (token.localScope) {
+      sendError({
+        message: `You cannot create nested functions "${nextToken.value}"`,
+        line: nextToken.line,
+        column: nextToken.column
+      });
+    }
 
+    const indexOfFunctionBodyStart = this.tokens.indexOf(nextTokenAfterRightParen) + 1;
+    let currentIndexOnBody = indexOfFunctionBodyStart;
+
+    const functionBodyTokens: Token[] = [];
     const isrightCurly = (token: Token) => token.type === TokenType.RightCurly;
 
-    while (!isrightCurly(this.tokens[indexOfFunctionBodyStart])) {
-      functionBodyTokens.push(this.tokens[indexOfFunctionBodyStart]);
-      indexOfFunctionBodyStart++;
+    while (!isrightCurly(this.tokens[currentIndexOnBody])) {
+      functionBodyTokens.push(this.tokens[currentIndexOnBody]);
+      currentIndexOnBody++;
     }
+
+    const indexOfFunctionBodyEnd = currentIndexOnBody;
+
+    this.tokens.forEach((token, index) => {
+      if (index >= indexOfFunctionBodyStart && index <= indexOfFunctionBodyEnd) {
+        token.localScope = { name: nextToken.value }
+      }
+    });
 
     this.astNodes.push({
       isFunctionDeclaration: true,
+      localScope: nextToken.localScope,
       column: nextToken.column,
       line: nextToken.line,
       functionDeclarationValue: {
@@ -132,7 +150,7 @@ export class Parser {
       && this.getPreviousToken(token).value !== keywords.functionDeclaration;
   }
 
-  private parseFunctionCall(token: Token) {
+  private parseFunctionCall(token: Token, moduleAccessFieldValue?: ModuleAccessFieldValue) {
     let nextToken = this.getNextToken(this.getNextToken(token));
     const parameters: Token[] = [];
 
@@ -153,7 +171,6 @@ export class Parser {
       }
     }
 
-    console.log(nextToken)
     if (nextToken.type !== TokenType.RightParen) {
       sendError({
         message: `Expected ")" after "(", got "${nextToken.value}" instead`,
@@ -164,12 +181,15 @@ export class Parser {
 
     this.astNodes.push({
       isFunctionCall: true,
+      localScope: token.localScope,
       column: token.column,
       line: token.line,
       functionCallValue: {
         name: token.value,
         args: parameters
-      }
+      },
+      moduleAccessFieldValue,
+      isModuleAccessField: !!moduleAccessFieldValue
     });
   }
 
@@ -211,19 +231,14 @@ export class Parser {
     }
 
     if (this.isModuleFunctionCall(nextTokenAfterDot)) {
-      this.parseFunctionCall(nextTokenAfterDot);
+      const moduleAccessFieldValue = {
+        name: token.value,
+        field: nextTokenAfterDot.value,
+        isFunctionCall: true
+      }
 
-      this.astNodes.push({
-        isModuleAccessField: true,
-        isFunctionCall: true,
-        column: token.column,
-        line: token.line,
-        moduleAccessFieldValue: {
-          name: token.value,
-          field: nextTokenAfterDot.value,
-          isFunctionCall: this.isModuleFunctionCall(nextTokenAfterDot)
-        }
-      });
+      this.parseFunctionCall(nextTokenAfterDot, moduleAccessFieldValue);
+
     }
     else {
       this.astNodes.push({
@@ -231,10 +246,11 @@ export class Parser {
         isFunctionCall: false,
         column: token.column,
         line: token.line,
+        localScope: token.localScope,
         moduleAccessFieldValue: {
           name: token.value,
           field: nextTokenAfterDot.value,
-          isFunctionCall: this.isModuleFunctionCall(nextTokenAfterDot)
+          isFunctionCall: true
         }
       });
     }
@@ -272,6 +288,7 @@ export class Parser {
       isVariableDeclaration: true,
       column: token.column,
       line: token.line,
+      localScope: token.localScope,
       variableDeclarationValue: {
         name: nameToken.value,
         value: nextTokenAfterEquals.value,
@@ -304,6 +321,7 @@ export class Parser {
       isVariableAssignment: true,
       column: token.column,
       line: token.line,
+      localScope: token.localScope,
       variableAssignmentValue: {
         name: token.value,
         value: nextTokenAfterEquals.value,

@@ -9,10 +9,15 @@ export enum TokenType {
   Equals
 }
 
+export type LocalScope = {
+  name: string;
+}
+
 export interface Token {
   type: TokenType;
   value: string;
   line: number;
   column: number;
+  localScope?: LocalScope;
 }
 

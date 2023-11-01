@@ -1,8 +1,10 @@
 import "IO"
 
 function main() {
-  var name = 'lipe'        
-  var newName = 'lupe'
-  name = newName
-  IO.print(name)
-}   
+  IO.print("hello from main")
+} 
+
+function secondary() {
+  IO.print("hello from secondary")
+}
+

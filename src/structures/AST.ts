@@ -1,4 +1,4 @@
-import { Token, TokenType } from './Token';
+import { LocalScope, Token, TokenType } from './Token';
 
 export enum ASTNodeType {
   FunctionDeclaration,
@@ -47,4 +47,5 @@ export interface ASTNode {
   variableAssignmentValue?: VariableAssignmentValue;
   line: number;
   column: number;
+  localScope?: LocalScope;
 }

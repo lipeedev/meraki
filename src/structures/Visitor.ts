@@ -1,6 +1,6 @@
 import { sendError } from '../utils/sendError';
 import { ASTNode } from './AST';
-import { TokenType } from './Token';
+import { Token, TokenType } from './Token';
 
 export type ImportModule = {
   name: string,
@@ -13,10 +13,35 @@ export type Variable = {
   type: TokenType
 }
 
+export type FunctionDeclaration = {
+  name: string,
+  args?: Token[],
+  body: ASTNode[]
+}
+
 export class Visitor {
   private variables: Variable[] = [];
+  private functionDeclarationList: FunctionDeclaration[] = [];
+  private astNodes: ASTNode[];
+  private importModules?: ImportModule[];
+  private position = 0;
 
-  constructor(private astNodes: ASTNode[], private importModules?: ImportModule[]) { }
+  constructor(astNodes: ASTNode[], importModules?: ImportModule[]) {
+    this.astNodes = astNodes;
+    this.importModules = importModules;
+  }
+
+  private get isEndOfAST() {
+    return this.position >= this.astNodes.length;
+  }
+
+  private getCurrentNode() {
+    return this.astNodes[this.position];
+  }
+
+  private advance() {
+    this.position++;
+  }
 
   private manageModuleAccessFieldFunctionCall(node: ASTNode, myModule: ImportModule) {
     const functionInAst = this.astNodes.find(_node => _node.isFunctionCall && _node.functionCallValue?.name === (node.moduleAccessFieldValue?.field) as string);
@@ -109,19 +134,54 @@ export class Visitor {
     variable.value = node.variableAssignmentValue?.value!;
   }
 
+  private manageFunctionDeclaration(node: ASTNode) {
+    const functionAlreadyExists = this.functionDeclarationList.some(func => func.name === node.functionDeclarationValue?.name);
+
+    if (functionAlreadyExists) {
+      return sendError({
+        message: `Function "${node.functionDeclarationValue?.name}" already exists`,
+        line: node.line,
+        column: node.column
+      })
+    }
+
+    this.functionDeclarationList.push({
+      name: node.functionDeclarationValue?.name!,
+      body: node.functionDeclarationValue?.body!
+    });
+
+    const firstNodeOutsideFunctionBody = this.astNodes.find((_node, index) => _node.localScope?.name !== node.functionDeclarationValue?.name && index > this.astNodes.indexOf(node));
+
+    if (firstNodeOutsideFunctionBody) {
+      this.position = this.astNodes.indexOf(firstNodeOutsideFunctionBody) - 1;
+    }
+    else {
+      this.position = this.astNodes.length;
+    }
+  }
+
   public visit() {
-    for (const node of this.astNodes) {
+    while (!this.isEndOfAST) {
+      const node = this.getCurrentNode();
 
       if (node.isModuleAccessField) {
         this.manageModuleAccessField(node)
+        this.advance();
       }
 
       if (node.isVariableDeclaration) {
         this.manageVariableDeclaration(node);
+        this.advance();
       }
 
       if (node.isVariableAssignment) {
         this.manageVariableAssignment(node);
+        this.advance();
+      }
+
+      if (node.isFunctionDeclaration) {
+        this.manageFunctionDeclaration(node);
+        this.advance();
       }
 
       // TODO: Add more cases
