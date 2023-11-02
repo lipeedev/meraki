@@ -1,1 +1,1 @@
-export * from './functions/print';
+export * from './functions';

@@ -1,15 +1,9 @@
 import "IO"
+import "String"
 
 function main() {
-  IO.print("hello from main")
-} 
-
-function secondary() {
-  IO.print("hello from secondary1")
-  IO.print("hello from secondary2")
+  var upper = String.toUpperCase("hello world")
+  IO.print(upper)
 }
 
-IO.print("outside function1")
-IO.print("outside function2")
-secondary()
 main()
