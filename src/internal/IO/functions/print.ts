@@ -21,7 +21,7 @@ export function print({ variables, functionsReturn, line, args, column }: Module
       const functionReturn = functionsReturn.find(functionReturn => functionReturn.name === arg.value);
 
       if (variable && variable.isFunctionCall) {
-        const value = functionsReturn.find(functionReturn => functionReturn.name === variable.value)?.returnValue!
+        const value = functionsReturn.find(functionReturn => functionReturn.name === variable.value && functionReturn.variableFunction?.name === variable.name)?.returnValue!
         valuesToPrint.push(value);
       }
 

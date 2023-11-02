@@ -27,6 +27,9 @@ export type FunctionReturnData = {
   column: number,
   name: string,
   returnValue?: any
+  variableFunction?: {
+    name: string
+  }
 }
 
 export type ModuleFunctionCallParams = {
@@ -57,6 +60,10 @@ export class Visitor {
 
   private getCurrentNode() {
     return this.astNodes[this.position];
+  }
+
+  private getPreviousNode() {
+    return this.astNodes[this.position - 1];
   }
 
   private advance() {
@@ -91,12 +98,21 @@ export class Visitor {
       column: node.column
     })
 
+    let variableFunction: { name: string } | undefined;
+
+    if (this.getPreviousNode()?.isVariableDeclaration) {
+      variableFunction = {
+        name: this.getPreviousNode()?.variableDeclarationValue?.name!
+      }
+    }
+
     if (functionAfterCall?.returnValue) {
       this.functionReturnList.push({
         name: node.functionCallValue?.name!,
         line: node.line,
         column: node.column,
-        returnValue: functionAfterCall.returnValue
+        returnValue: functionAfterCall.returnValue,
+        variableFunction
       })
     }
 
