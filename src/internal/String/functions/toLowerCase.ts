@@ -3,7 +3,7 @@ import { ModuleFunctionCallParams } from "../../../structures/Visitor";
 import { sendError } from "../../../utils/sendError";
 
 const argsSize = 1;
-
+ 
 export function toLowerCase({ args, line, column }: ModuleFunctionCallParams) {
   if (args.length !== argsSize) {
     return sendError({
