@@ -1,0 +1,9 @@
+import "IO"
+import "String"
+
+function main() {
+  var lower = String.toLowerCase("HELLO WORLD")
+  IO.print(lower)
+}
+
+main()
