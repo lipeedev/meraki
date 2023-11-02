@@ -1,10 +1,8 @@
 import "IO"
-import "String"
 
 function main() {
-  var upper = String.toUpperCase("hello world")
-  var upper2 = String.toUpperCase("hello world2")
-  IO.print(upper upper2)
+  var hello = "Hello world!"
+  IO.print(hello)
 }
 
 main()
