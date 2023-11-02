@@ -1,7 +1,7 @@
 import "IO"
 
 function main() {
-  IO.print("hello world")
+  IO.print("Hello world!")
 }
 
 main()
