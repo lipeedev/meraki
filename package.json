@@ -8,7 +8,8 @@
     "dev": "npx tsx src/index.ts",
     "build": "npx tsx src/index.ts -o dist/index.js",
     "lint": "npx eslint --fix src/**/*.ts",
-    "prepare": "npx husky install"
+    "prepare": "npx husky install",
+    "commit": "git-cz"
   },
   "keywords": [],
   "author": "",
