@@ -1,0 +1,9 @@
+import "IO"
+import "String"
+
+function toUpperCase() {
+  var upper = String.toUpperCase("hello world!")
+  IO.print(upper)
+}
+
+toUpperCase()
