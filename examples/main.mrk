@@ -4,8 +4,10 @@ import "String"
 function main() {
   var hello = String.toUpperCase("hello world")
   var hello2 = hello
+  var name = "lipe"
+  var upper = String.toUpperCase(name)
 
-  IO.print(hello hello2)
+  IO.print(hello hello2 upper)
 }
 
 main()

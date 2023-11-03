@@ -4,7 +4,9 @@ import { sendError } from "../../../utils/sendError";
 
 const argsSize = 1;
 
-export function toUpperCase({ args, line, column }: ModuleFunctionCallParams) {
+export function toUpperCase({ args, line, column, variables }: ModuleFunctionCallParams) {
+  let value;
+
   if (args.length !== argsSize) {
     return sendError({
       message: `toUpperCase() takes exactly ${argsSize} argument (${args.length} given)`,
@@ -13,7 +15,7 @@ export function toUpperCase({ args, line, column }: ModuleFunctionCallParams) {
     })
   }
 
-  if (args[0].type !== TokenType.String) {
+  if (args[0].type !== TokenType.String && args[0].type !== TokenType.Identifier) {
     return sendError({
       message: `toUpperCase() argument must be a string`,
       line: args[0].line,
@@ -21,6 +23,34 @@ export function toUpperCase({ args, line, column }: ModuleFunctionCallParams) {
     })
   }
 
-  return { returnValue: args[0].value.toUpperCase() }
+  if (args[0].type === TokenType.Identifier) {
+    const variable = variables.find(_var => _var.name === args[0].value)
+    if (!variable) {
+      return sendError({
+        message: `Variable ${args[0].value} not found`,
+        line: args[0].line,
+        column: args[0].column
+      })
+    }
+
+    if (variable.type !== TokenType.String) {
+      return sendError({
+        message: `toUpperCase() argument must be a string`,
+        line: args[0].line,
+        column: args[0].column
+      })
+    }
+
+    value = variable.value;
+  }
+  else {
+    value = args[0].value;
+  }
+
+
+  return {
+    returnValue: value.toUpperCase(),
+    type: TokenType.String
+  }
 
 }

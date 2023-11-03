@@ -31,8 +31,9 @@ export type FunctionReturnData = {
   line: number,
   column: number,
   name: string,
-  returnValue?: any
-  variableFunction?: VariableFuncton
+  returnValue?: any,
+  variableFunction?: VariableFuncton,
+  type?: TokenType
 }
 
 export type ModuleFunctionCallParams = {
@@ -113,6 +114,7 @@ export class Visitor {
       this.functionReturnList.push({
         name: node.functionCallValue?.name!,
         line: node.line,
+        type: functionAfterCall?.type,
         column: node.column,
         returnValue: functionAfterCall.returnValue,
         variableFunction
