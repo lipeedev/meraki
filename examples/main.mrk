@@ -2,8 +2,14 @@ import "IO"
 import "String"
 
 function hello() {
-  return "Hello world"
+  var x = "hello"
+  return x
+}
+
+function world() {
+  return "world"
 }
 
 var msg = hello()
-IO.print("message:" msg)
+var msg2 = world()
+IO.print("message:" msg msg2)

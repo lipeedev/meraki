@@ -13,11 +13,11 @@ export class Parser {
   constructor(private tokens: Token[]) { }
 
   private getNextToken(token: Token) {
-    return this.tokens[this.tokens.indexOf(token) + 1];
+    return this.tokens[this.tokens.indexOf(token) + 1] ?? this.tokens[this.tokens.indexOf(token)];
   }
 
   private getPreviousToken(token: Token) {
-    return this.tokens[this.tokens.indexOf(token) - 1];
+    return this.tokens[this.tokens.indexOf(token) - 1] ?? this.tokens[this.tokens.indexOf(token)];
   }
 
   private get isEndOfTokens() {

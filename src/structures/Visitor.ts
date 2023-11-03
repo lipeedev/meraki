@@ -293,8 +293,6 @@ export class Visitor {
     const functionReturn = functionDeclaration.body.find(token => token.isFunctionReturn)
 
     if (functionReturn) {
-      this.manageFunctionReturn(functionReturn)
-
       let variableFunction: VariableFuncton | undefined;
 
       if (this.getPreviousNode()?.isVariableDeclaration) {
@@ -302,6 +300,10 @@ export class Visitor {
           name: this.getPreviousNode()?.variableDeclarationValue?.name!
         }
       }
+
+      functionDeclaration.body = functionDeclaration.body.slice(0, functionDeclaration.body.indexOf(functionReturn) + 1)
+
+      new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList).visit();
 
       this.functionReturnList.push({
         name: node.functionCallValue?.name!,
@@ -312,7 +314,7 @@ export class Visitor {
         type: functionReturn?.functionReturnValue?.type
       })
 
-      functionDeclaration.body = functionDeclaration.body.slice(0, functionDeclaration.body.indexOf(functionReturn))
+      return;
     }
 
     new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList).visit();
@@ -371,6 +373,11 @@ export class Visitor {
 
       if (node.isFunctionCall && !node.isModuleAccessField && !node.isVariableDeclaration) {
         this.manageFunctionCall(node);
+        this.advance();
+      }
+
+      if (node.isFunctionReturn) {
+        this.manageFunctionReturn(node);
         this.advance();
       }
 
