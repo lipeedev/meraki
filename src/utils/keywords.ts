@@ -1,4 +1,6 @@
 export default {
-    variableDeclaration: 'var',
-    functionDeclaration: 'function',
+  variableDeclaration: 'var',
+  functionDeclaration: 'function',
+  functionReturn: 'return',
+  importDeclaration: 'import',
 };

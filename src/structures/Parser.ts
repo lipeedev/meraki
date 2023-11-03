@@ -29,7 +29,7 @@ export class Parser {
   }
 
   private isImport(token: Token) {
-    return token.type === TokenType.Identifier && token.value === 'import';
+    return token.type === TokenType.Identifier && token.value === keywords.importDeclaration;
   }
 
   private async parseImport(token: Token) {
@@ -37,7 +37,8 @@ export class Parser {
 
     if (nextToken.type !== TokenType.String) {
       sendError({
-        message: `Expected string after "import" keyword, got "${nextToken.value}" instead`,
+        message: `Expected string after "${keywords.importDeclaration}" keyword, got "${nextToken.value}" instead`,
+
         line: nextToken.line,
         column: nextToken.column
       });
@@ -55,6 +56,42 @@ export class Parser {
     }
 
     this.importModules.push({ name: importName, exports: importModuleFile });
+  }
+
+  private isFunctionReturn(token: Token) {
+    return token.type === TokenType.Identifier && token.value === keywords.functionReturn;
+  }
+
+  private parseFunctionReturn(token: Token) {
+    if (!token.localScope) {
+      sendError({
+        message: `You can't return outside a function`,
+        line: token.line,
+        column: token.column
+      });
+    }
+
+    const nextToken = this.getNextToken(token);
+
+    if (![TokenType.Identifier, TokenType.String].includes(nextToken.type)) {
+      sendError({
+        message: `Expected a valid value after "${keywords.functionReturn}", got "${nextToken.value}" instead`,
+        line: nextToken.line,
+        column: nextToken.column
+      });
+    }
+
+    this.astNodes.push({
+      isFunctionReturn: true,
+      column: token.column,
+      line: token.line,
+      localScope: token.localScope,
+      functionReturnValue: {
+        value: nextToken.value,
+        type: nextToken.type
+      }
+    });
+
   }
 
   private isFunctionDefinition(token: Token) {
@@ -372,6 +409,10 @@ export class Parser {
 
       else if (this.isVariableAssignment(currentToken)) {
         this.parseVariableAssignment(currentToken);
+      }
+
+      else if (this.isFunctionReturn(currentToken)) {
+        this.parseFunctionReturn(currentToken);
       }
 
       this.advance();

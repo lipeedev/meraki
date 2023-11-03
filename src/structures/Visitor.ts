@@ -158,8 +158,9 @@ export class Visitor {
       const variableToAssign = this.variables.find(variable => variable.name === node.variableDeclarationValue?.value);
       const functionReturnToAssign = this.functionReturnList.find(functionReturn => functionReturn.variableFunction?.name === node.variableDeclarationValue?.value);
       const isVariableFunctionModule = this.importModules?.some(mod => mod.exports[node.variableDeclarationValue?.value as string]);
+      const isVariableFunctionDeclaration = this.functionDeclarationList.some(func => func.name === node.variableDeclarationValue?.value)
 
-      if (!variableToAssign && !functionReturnToAssign && !isVariableFunctionModule) {
+      if (!isVariableFunctionDeclaration && !variableToAssign && !functionReturnToAssign && !isVariableFunctionModule) {
         return sendError({
           message: `"${node.variableDeclarationValue?.value}" not found`,
           line: node.line,
@@ -167,7 +168,7 @@ export class Visitor {
         });
       }
 
-      if (!isVariableFunctionModule) {
+      if (!isVariableFunctionModule && !isVariableFunctionDeclaration) {
         const value = variableToAssign?.value ?? functionReturnToAssign?.returnValue;
         const isFunctionCall = variableToAssign?.isFunctionCall ?? true;
         const type = variableToAssign?.type ?? TokenType.Identifier
@@ -184,6 +185,11 @@ export class Visitor {
 
         return
       }
+
+      if (isVariableFunctionDeclaration) {
+        node.isFunctionCall = true
+      }
+
     }
 
     this.variables.push({
@@ -284,8 +290,59 @@ export class Visitor {
       });
     }
 
-    new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList).visit();
+    const functionReturn = functionDeclaration.body.find(token => token.isFunctionReturn)
 
+    if (functionReturn) {
+      this.manageFunctionReturn(functionReturn)
+
+      let variableFunction: VariableFuncton | undefined;
+
+      if (this.getPreviousNode()?.isVariableDeclaration) {
+        variableFunction = {
+          name: this.getPreviousNode()?.variableDeclarationValue?.name!
+        }
+      }
+
+      this.functionReturnList.push({
+        name: node.functionCallValue?.name!,
+        line: node.line,
+        column: node.column,
+        variableFunction,
+        returnValue: functionReturn?.functionReturnValue?.value,
+        type: functionReturn?.functionReturnValue?.type
+      })
+
+      functionDeclaration.body = functionDeclaration.body.slice(0, functionDeclaration.body.indexOf(functionReturn))
+    }
+
+    new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList).visit();
+  }
+
+  private manageFunctionReturn(node: ASTNode) {
+    const returnValue = node.functionReturnValue
+
+    if (returnValue?.type === TokenType.Identifier) {
+      const variable = this.variables.find(variable => variable.name === returnValue?.value);
+
+      if (!variable) {
+        return sendError({
+          message: `"${returnValue?.value}" not found`,
+          line: node.line,
+          column: node.column
+        });
+      }
+
+      if (variable.type !== TokenType.String) {
+        sendError({
+          message: `Expected a valid return type`,
+          column: node.column,
+          line: node.line
+        })
+      }
+
+      node.functionReturnValue!.value = variable.value
+      node.functionReturnValue!.type = variable.type
+    }
   }
 
   public async visit() {
@@ -317,7 +374,6 @@ export class Visitor {
         this.advance();
       }
 
-      // TODO: Add more cases
     }
   }
 }

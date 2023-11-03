@@ -34,7 +34,13 @@ export type VariableAssignmentValue = {
   type: TokenType
 }
 
+export type FuncionReturnValue = {
+  value: string,
+  type: TokenType
+}
+
 export interface ASTNode {
+  isFunctionReturn?: boolean;
   isFunctionCall?: boolean;
   isModuleAccessField?: boolean;
   isFunctionDeclaration?: boolean;
@@ -45,6 +51,7 @@ export interface ASTNode {
   functionDeclarationValue?: FunctionDeclarationValue;
   variableDeclarationValue?: VariableDeclarationValue;
   variableAssignmentValue?: VariableAssignmentValue;
+  functionReturnValue?: FuncionReturnValue;
   line: number;
   column: number;
   localScope?: LocalScope;
