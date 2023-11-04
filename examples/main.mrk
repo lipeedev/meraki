@@ -1,15 +1,10 @@
 import "IO"
 import "String"
 
-function hello() {
-  var x = "hello"
-  return x
+function main() {
+  var name = String.type
+  
+  IO.print(name)
 }
 
-function world() {
-  return "world"
-}
-
-var msg = hello()
-var msg2 = world()
-IO.print("message:" msg msg2)
+main()

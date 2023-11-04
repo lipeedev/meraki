@@ -45,342 +45,365 @@ export type ModuleFunctionCallParams = {
 }
 
 export class Visitor {
-    private variables: Variable[] = [];
-    private functionReturnList: FunctionReturnData[] = [];
-    private functionDeclarationList: FunctionDeclaration[] = [];
-    private astNodes: ASTNode[];
-    private importModules?: ImportModule[];
-    private position = 0;
+  private variables: Variable[] = [];
+  private functionReturnList: FunctionReturnData[] = [];
+  private functionDeclarationList: FunctionDeclaration[] = [];
+  private astNodes: ASTNode[];
+  private importModules?: ImportModule[];
+  private position = 0;
 
-    constructor(astNodes: ASTNode[], importModules?: ImportModule[], functionDeclarationList?: FunctionDeclaration[]) {
-        this.astNodes = astNodes;
-        this.importModules = importModules;
-        this.functionDeclarationList = functionDeclarationList ?? [];
+  constructor(astNodes: ASTNode[], importModules?: ImportModule[], functionDeclarationList?: FunctionDeclaration[]) {
+    this.astNodes = astNodes;
+    this.importModules = importModules;
+    this.functionDeclarationList = functionDeclarationList ?? [];
+  }
+
+  private get isEndOfAST() {
+    return this.position >= this.astNodes.length;
+  }
+
+  private getCurrentNode() {
+    return this.astNodes[this.position];
+  }
+
+  private getPreviousNode() {
+    return this.astNodes[this.position - 1];
+  }
+
+  private advance() {
+    this.position++;
+  }
+
+  private manageModuleAccessFieldFunctionCall(node: ASTNode, myModule: ImportModule) {
+    const functionCall = myModule?.exports[node.moduleAccessFieldValue?.field as string] as (param: ModuleFunctionCallParams) => any;
+
+    if (!functionCall) {
+      sendError({
+        message: `Function "${node.moduleAccessFieldValue?.field}" not found in module "${node.moduleAccessFieldValue?.name}"`,
+        line: node.line,
+        column: node.column
+      });
     }
 
-    private get isEndOfAST() {
-        return this.position >= this.astNodes.length;
+    let args: Token[];
+
+    if (!node.localScope) {
+      args = this.astNodes.find(_node => !_node.localScope && _node.isFunctionCall && _node.isModuleAccessField && _node.functionCallValue?.name === node.functionCallValue?.name && isArrayEquals(_node.functionCallValue?.args!, node.functionCallValue?.args!))?.functionCallValue?.args!;
+    }
+    else {
+      args = this.astNodes.find(_node => _node.localScope?.name === node.localScope?.name && _node.isFunctionCall && _node.isModuleAccessField && _node.functionCallValue?.name === node.functionCallValue?.name && isArrayEquals(_node.functionCallValue?.args!, node.functionCallValue?.args!))?.functionCallValue?.args!;
     }
 
-    private getCurrentNode() {
-        return this.astNodes[this.position];
+    let functionAfterCall
+
+    try {
+      functionAfterCall = functionCall({
+        functionsReturn: this.functionReturnList,
+        variables: this.variables,
+        args: args!,
+        line: node.line,
+        column: node.column
+      })
+    } catch {
+      sendError({
+        message: `"${node.moduleAccessFieldValue?.field}" in module "${node.moduleAccessFieldValue?.name}" is not a function, remove the "()"`,
+        line: node.line,
+        column: node.column
+      })
     }
 
-    private getPreviousNode() {
-        return this.astNodes[this.position - 1];
+    let variableFunction: VariableFuncton | undefined;
+
+    if (this.getPreviousNode()?.isVariableDeclaration) {
+      variableFunction = {
+        name: this.getPreviousNode()?.variableDeclarationValue?.name!
+      };
     }
 
-    private advance() {
-        this.position++;
+    if (functionAfterCall?.returnValue) {
+      this.functionReturnList.push({
+        name: node.functionCallValue?.name!,
+        line: node.line,
+        type: functionAfterCall?.type,
+        column: node.column,
+        returnValue: functionAfterCall.returnValue,
+        variableFunction
+      });
     }
 
-    private manageModuleAccessFieldFunctionCall(node: ASTNode, myModule: ImportModule) {
-        const functionCall = myModule?.exports[node.moduleAccessFieldValue?.field as string] as (param: ModuleFunctionCallParams) => any;
+  }
 
-        if (!functionCall) {
-            sendError({
-                message: `Function "${node.moduleAccessFieldValue?.field}" not found in module "${node.moduleAccessFieldValue?.name}"`,
-                line: node.line,
-                column: node.column
-            });
-        }
+  private manageModuleAccessField(node: ASTNode) {
+    const myModule = this.importModules?.find(mod => mod.name === node.moduleAccessFieldValue?.name);
+    if (!myModule) {
+      sendError({
+        message: `Module ${node.moduleAccessFieldValue?.name} not found`,
+        line: node.line,
+        column: node.column
+      });
+    }
 
-        let args: Token[];
+    const isModuleAcessFieldFunctionCall = node.isFunctionCall && node.isModuleAccessField;
 
-        if (!node.localScope) {
-            args = this.astNodes.find(_node => !_node.localScope && _node.isFunctionCall && _node.isModuleAccessField && _node.functionCallValue?.name === node.functionCallValue?.name && isArrayEquals(_node.functionCallValue?.args!, node.functionCallValue?.args!))?.functionCallValue?.args!;
-        }
-        else {
-            args = this.astNodes.find(_node => _node.localScope?.name === node.localScope?.name && _node.isFunctionCall && _node.isModuleAccessField && _node.functionCallValue?.name === node.functionCallValue?.name && isArrayEquals(_node.functionCallValue?.args!, node.functionCallValue?.args!))?.functionCallValue?.args!;
-        }
+    if (isModuleAcessFieldFunctionCall) {
+      return this.manageModuleAccessFieldFunctionCall(node, myModule as ImportModule);
+    }
 
-        const functionAfterCall = functionCall({
-            functionsReturn: this.functionReturnList,
-            variables: this.variables,
-            args: args!,
-            line: node.line,
-            column: node.column
+    const staticField = myModule?.exports[node.moduleAccessFieldValue?.field as string];
+
+    if (!staticField) {
+      sendError({
+        message: `Field "${node.moduleAccessFieldValue?.field}" not found in module "${node.moduleAccessFieldValue?.name}"`,
+        line: node.line,
+        column: node.column
+      })
+    }
+
+    if (this.getPreviousNode().isVariableDeclaration || this.getPreviousNode().isVariableAssignment) {
+      const indexOfVariableToAssign = this.variables.findIndex(variable => variable.name === (this.getPreviousNode().variableDeclarationValue?.name ?? this.getPreviousNode().variableAssignmentValue?.name));
+      this.variables[indexOfVariableToAssign].value = staticField.value
+      this.variables[indexOfVariableToAssign].type = staticField.type
+    }
+
+    return staticField
+  }
+
+  private manageVariableDeclaration(node: ASTNode) {
+    const variableAlreadyExists = this.variables.some(variable => variable.name === node.variableDeclarationValue?.name);
+
+    if (variableAlreadyExists) {
+      sendError({
+        message: `Variable "${node.variableDeclarationValue?.name}" already exists`,
+        line: node.line,
+        column: node.column
+      });
+    }
+
+    if (node.variableDeclarationValue?.type === TokenType.Identifier) {
+      const variableToAssign = this.variables.find(variable => variable.name === node.variableDeclarationValue?.value);
+      const functionReturnToAssign = this.functionReturnList.find(functionReturn => functionReturn.variableFunction?.name === node.variableDeclarationValue?.value);
+      const isVariableFunctionModule = this.importModules?.some(mod => mod.exports[node.variableDeclarationValue?.value as string]);
+      const isVariableFunctionDeclaration = this.functionDeclarationList.some(func => func.name === node.variableDeclarationValue?.value);
+
+      if (!isVariableFunctionDeclaration && !variableToAssign && !functionReturnToAssign && !isVariableFunctionModule) {
+        return sendError({
+          message: `"${node.variableDeclarationValue?.value}" not found`,
+          line: node.line,
+          column: node.column
         });
+      }
 
-        let variableFunction: VariableFuncton | undefined;
+      if (!isVariableFunctionModule && !isVariableFunctionDeclaration) {
+        const value = variableToAssign?.value ?? functionReturnToAssign?.returnValue;
+        const isFunctionCall = variableToAssign?.isFunctionCall ?? true;
+        const type = variableToAssign?.type ?? TokenType.Identifier;
 
-        if (this.getPreviousNode()?.isVariableDeclaration) {
-            variableFunction = {
-                name: this.getPreviousNode()?.variableDeclarationValue?.name!
-            };
-        }
-
-        if (functionAfterCall?.returnValue) {
-            this.functionReturnList.push({
-                name: node.functionCallValue?.name!,
-                line: node.line,
-                type: functionAfterCall?.type,
-                column: node.column,
-                returnValue: functionAfterCall.returnValue,
-                variableFunction
-            });
-        }
-
-    }
-
-    private manageModuleAccessField(node: ASTNode) {
-        const myModule = this.importModules?.find(mod => mod.name === node.moduleAccessFieldValue?.name);
-
-        if (!myModule) {
-            sendError({
-                message: `Module ${node.moduleAccessFieldValue?.name} not found`,
-                line: node.line,
-                column: node.column
-            });
-        }
-
-        const isModuleAcessFieldFunctionCall = node.isFunctionCall && node.isModuleAccessField;
-
-        if (isModuleAcessFieldFunctionCall) {
-            this.manageModuleAccessFieldFunctionCall(node, myModule as ImportModule);
-        }
-
-    //TODO: static module fields access
-    }
-
-    private manageVariableDeclaration(node: ASTNode) {
-        const variableAlreadyExists = this.variables.some(variable => variable.name === node.variableDeclarationValue?.name);
-
-        if (variableAlreadyExists) {
-            sendError({
-                message: `Variable "${node.variableDeclarationValue?.name}" already exists`,
-                line: node.line,
-                column: node.column
-            });
-        }
-
-        if (node.variableDeclarationValue?.type === TokenType.Identifier) {
-            const variableToAssign = this.variables.find(variable => variable.name === node.variableDeclarationValue?.value);
-            const functionReturnToAssign = this.functionReturnList.find(functionReturn => functionReturn.variableFunction?.name === node.variableDeclarationValue?.value);
-            const isVariableFunctionModule = this.importModules?.some(mod => mod.exports[node.variableDeclarationValue?.value as string]);
-            const isVariableFunctionDeclaration = this.functionDeclarationList.some(func => func.name === node.variableDeclarationValue?.value);
-
-            if (!isVariableFunctionDeclaration && !variableToAssign && !functionReturnToAssign && !isVariableFunctionModule) {
-                return sendError({
-                    message: `"${node.variableDeclarationValue?.value}" not found`,
-                    line: node.line,
-                    column: node.column
-                });
-            }
-
-            if (!isVariableFunctionModule && !isVariableFunctionDeclaration) {
-                const value = variableToAssign?.value ?? functionReturnToAssign?.returnValue;
-                const isFunctionCall = variableToAssign?.isFunctionCall ?? true;
-                const type = variableToAssign?.type ?? TokenType.Identifier;
-
-                if (functionReturnToAssign) {
-                    const indexOfTheFunction = this.functionReturnList.indexOf(functionReturnToAssign);
-                    const variableFunctionReferences = functionReturnToAssign.variableFunction?.references ?? [];
+        if (functionReturnToAssign) {
+          const indexOfTheFunction = this.functionReturnList.indexOf(functionReturnToAssign);
+          const variableFunctionReferences = functionReturnToAssign.variableFunction?.references ?? [];
 
           this.functionReturnList[indexOfTheFunction]!.variableFunction!
-              .references = [node.variableDeclarationValue?.name!, ...variableFunctionReferences];
-                }
-
-                this.variables.push({ name: node.variableDeclarationValue?.name, value, type, isFunctionCall });
-
-                return;
-            }
-
-            if (isVariableFunctionDeclaration) {
-                node.isFunctionCall = true;
-            }
-
+            .references = [node.variableDeclarationValue?.name!, ...variableFunctionReferences];
         }
 
-        this.variables.push({
-            name: node.variableDeclarationValue?.name as string,
-            value: node.variableDeclarationValue?.value,
-            type: node.variableDeclarationValue?.type as TokenType,
-            isFunctionCall: node.isFunctionCall
-        });
+        this.variables.push({ name: node.variableDeclarationValue?.name, value, type, isFunctionCall });
+
+        return;
+      }
+
+      if (isVariableFunctionDeclaration) {
+        node.isFunctionCall = true;
+      }
+
     }
 
-    private manageVariableAssignment(node: ASTNode) {
-        const variable = this.variables.find(variable => variable.name === node.variableAssignmentValue?.name);
+    this.variables.push({
+      name: node.variableDeclarationValue?.name as string,
+      value: node.variableDeclarationValue?.value,
+      type: node.variableDeclarationValue?.type as TokenType,
+      isFunctionCall: node.isFunctionCall
+    });
+  }
 
-        if (!variable) {
-            return sendError({
-                message: `Variable "${node.variableAssignmentValue?.name}" not found`,
-                line: node.line,
-                column: node.column
-            });
-        }
+  private manageVariableAssignment(node: ASTNode) {
+    const variable = this.variables.find(variable => variable.name === node.variableAssignmentValue?.name);
 
-        if (node.variableAssignmentValue?.type !== variable.type && node.variableAssignmentValue?.type !== TokenType.Identifier) {
-            return sendError({
-                message: `Variable "${variable.name}" is of type "${variable.type}" and cannot be assigned to a value of type "${node.variableAssignmentValue?.type}"`,
-                line: node.line,
-                column: node.column
-            });
-        }
+    if (!variable) {
+      return sendError({
+        message: `Variable "${node.variableAssignmentValue?.name}" not found`,
+        line: node.line,
+        column: node.column
+      });
+    }
 
-        if (node.variableAssignmentValue?.type === TokenType.Identifier) {
-            const variableToAssign = this.variables.find(variable => variable.name === node.variableAssignmentValue?.value);
-            const functionReturnToAssign = this.functionReturnList.find(functionReturn => functionReturn.variableFunction?.name === node.variableAssignmentValue?.value);
+    if (node.variableAssignmentValue?.type !== variable.type && node.variableAssignmentValue?.type !== TokenType.Identifier) {
+      return sendError({
+        message: `Variable "${variable.name}" is of type "${variable.type}" and cannot be assigned to a value of type "${node.variableAssignmentValue?.type}"`,
+        line: node.line,
+        column: node.column
+      });
+    }
 
-            if (!variableToAssign && !functionReturnToAssign) {
-                return sendError({
-                    message: `"${node.variableAssignmentValue?.value}" not found`,
-                    line: node.line,
-                    column: node.column
-                });
-            }
+    if (node.variableAssignmentValue?.type === TokenType.Identifier) {
+      const variableToAssign = this.variables.find(variable => variable.name === node.variableAssignmentValue?.value);
+      const functionReturnToAssign = this.functionReturnList.find(functionReturn => functionReturn.variableFunction?.name === node.variableAssignmentValue?.value);
 
-            const value = variableToAssign?.value ?? functionReturnToAssign?.returnValue;
+      if (!variableToAssign && !functionReturnToAssign) {
+        return sendError({
+          message: `"${node.variableAssignmentValue?.value}" not found`,
+          line: node.line,
+          column: node.column
+        });
+      }
 
-            if (functionReturnToAssign) {
-                const indexOfTheFunction = this.functionReturnList.indexOf(functionReturnToAssign);
-                const variableFunctionReferences = functionReturnToAssign.variableFunction?.references ?? [];
+      const value = variableToAssign?.value ?? functionReturnToAssign?.returnValue;
+
+      if (functionReturnToAssign) {
+        const indexOfTheFunction = this.functionReturnList.indexOf(functionReturnToAssign);
+        const variableFunctionReferences = functionReturnToAssign.variableFunction?.references ?? [];
 
         this.functionReturnList[indexOfTheFunction]!.variableFunction!
-            .references = [node.variableAssignmentValue?.name!, ...variableFunctionReferences];
+          .references = [node.variableAssignmentValue?.name!, ...variableFunctionReferences];
 
         variable.isFunctionCall = true;
-            }
+      }
 
-            variable.value = value;
-            return;
-        }
-
-        variable.value = node.variableAssignmentValue?.value!;
+      variable.value = value;
+      return;
     }
 
-    private async manageFunctionDeclaration(node: ASTNode) {
-        const functionAlreadyExists = this.functionDeclarationList.some(func => func.name === node.functionDeclarationValue?.name);
+    variable.value = node.variableAssignmentValue?.value!;
+  }
 
-        if (functionAlreadyExists) {
-            return sendError({
-                message: `Function "${node.functionDeclarationValue?.name}" already exists`,
-                line: node.line,
-                column: node.column
-            });
-        }
+  private async manageFunctionDeclaration(node: ASTNode) {
+    const functionAlreadyExists = this.functionDeclarationList.some(func => func.name === node.functionDeclarationValue?.name);
 
-        const functionBodyParser = new Parser(node.functionDeclarationValue?.body!);
-        const functionBodyParsed = await functionBodyParser.parse();
+    if (functionAlreadyExists) {
+      return sendError({
+        message: `Function "${node.functionDeclarationValue?.name}" already exists`,
+        line: node.line,
+        column: node.column
+      });
+    }
 
-        this.functionDeclarationList.push({
-            name: node.functionDeclarationValue?.name!,
-            body: functionBodyParsed.astNodes,
+    const functionBodyParser = new Parser(node.functionDeclarationValue?.body!);
+    const functionBodyParsed = await functionBodyParser.parse();
+
+    this.functionDeclarationList.push({
+      name: node.functionDeclarationValue?.name!,
+      body: functionBodyParsed.astNodes,
+    });
+
+    const firstNodeOutsideFunctionBody = this.astNodes.find((_node, index) => _node.localScope?.name !== node.functionDeclarationValue?.name && index > this.astNodes.indexOf(node));
+
+    if (firstNodeOutsideFunctionBody) {
+      this.position = this.astNodes.indexOf(firstNodeOutsideFunctionBody) - 1;
+    }
+    else {
+      this.position = this.astNodes.length;
+    }
+  }
+
+  private manageFunctionCall(node: ASTNode) {
+    const functionDeclaration = this.functionDeclarationList.find(func => func.name === node.functionCallValue?.name);
+
+    if (!functionDeclaration) {
+      return sendError({
+        message: `Function "${node.functionCallValue?.name}" not found`,
+        line: node.line,
+        column: node.column
+      });
+    }
+
+    const functionReturn = functionDeclaration.body.find(token => token.isFunctionReturn);
+
+    if (functionReturn) {
+      let variableFunction: VariableFuncton | undefined;
+
+      if (this.getPreviousNode()?.isVariableDeclaration) {
+        variableFunction = {
+          name: this.getPreviousNode()?.variableDeclarationValue?.name!
+        };
+      }
+
+      functionDeclaration.body = functionDeclaration.body.slice(0, functionDeclaration.body.indexOf(functionReturn) + 1);
+
+      new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList).visit();
+
+      this.functionReturnList.push({
+        name: node.functionCallValue?.name!,
+        line: node.line,
+        column: node.column,
+        variableFunction,
+        returnValue: functionReturn?.functionReturnValue?.value,
+        type: functionReturn?.functionReturnValue?.type
+      });
+
+      return;
+    }
+
+    new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList).visit();
+  }
+
+  private manageFunctionReturn(node: ASTNode) {
+    const returnValue = node.functionReturnValue;
+
+    if (returnValue?.type === TokenType.Identifier) {
+      const variable = this.variables.find(variable => variable.name === returnValue?.value);
+      if (!variable) {
+        return sendError({
+          message: `"${returnValue?.value}" not found`,
+          line: node.line,
+          column: node.column
         });
+      }
 
-        const firstNodeOutsideFunctionBody = this.astNodes.find((_node, index) => _node.localScope?.name !== node.functionDeclarationValue?.name && index > this.astNodes.indexOf(node));
-
-        if (firstNodeOutsideFunctionBody) {
-            this.position = this.astNodes.indexOf(firstNodeOutsideFunctionBody) - 1;
-        }
-        else {
-            this.position = this.astNodes.length;
-        }
-    }
-
-    private manageFunctionCall(node: ASTNode) {
-        const functionDeclaration = this.functionDeclarationList.find(func => func.name === node.functionCallValue?.name);
-
-        if (!functionDeclaration) {
-            return sendError({
-                message: `Function "${node.functionCallValue?.name}" not found`,
-                line: node.line,
-                column: node.column
-            });
-        }
-
-        const functionReturn = functionDeclaration.body.find(token => token.isFunctionReturn);
-
-        if (functionReturn) {
-            let variableFunction: VariableFuncton | undefined;
-
-            if (this.getPreviousNode()?.isVariableDeclaration) {
-                variableFunction = {
-                    name: this.getPreviousNode()?.variableDeclarationValue?.name!
-                };
-            }
-
-            functionDeclaration.body = functionDeclaration.body.slice(0, functionDeclaration.body.indexOf(functionReturn) + 1);
-
-            new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList).visit();
-
-            this.functionReturnList.push({
-                name: node.functionCallValue?.name!,
-                line: node.line,
-                column: node.column,
-                variableFunction,
-                returnValue: functionReturn?.functionReturnValue?.value,
-                type: functionReturn?.functionReturnValue?.type
-            });
-
-            return;
-        }
-
-        new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList).visit();
-    }
-
-    private manageFunctionReturn(node: ASTNode) {
-        const returnValue = node.functionReturnValue;
-
-        if (returnValue?.type === TokenType.Identifier) {
-            const variable = this.variables.find(variable => variable.name === returnValue?.value);
-
-            if (!variable) {
-                return sendError({
-                    message: `"${returnValue?.value}" not found`,
-                    line: node.line,
-                    column: node.column
-                });
-            }
-
-            if (variable.type !== TokenType.String) {
-                sendError({
-                    message: 'Expected a valid return type',
-                    column: node.column,
-                    line: node.line
-                });
-            }
+      if (variable.type !== TokenType.String) {
+        sendError({
+          message: 'Expected a valid return type',
+          column: node.column,
+          line: node.line
+        });
+      }
 
       node.functionReturnValue!.value = variable.value;
       node.functionReturnValue!.type = variable.type;
-        }
     }
+  }
 
-    public async visit() {
-        while (!this.isEndOfAST) {
-            const node = this.getCurrentNode();
+  public async visit() {
+    while (!this.isEndOfAST) {
+      const node = this.getCurrentNode();
+      if (node.isModuleAccessField) {
+        this.manageModuleAccessField(node);
+        this.advance();
+      }
 
-            if (node.isModuleAccessField) {
-                this.manageModuleAccessField(node);
-                this.advance();
-            }
+      if (node.isVariableDeclaration) {
+        this.manageVariableDeclaration(node);
+        this.advance();
+      }
 
-            if (node.isVariableDeclaration) {
-                this.manageVariableDeclaration(node);
-                this.advance();
-            }
+      if (node.isVariableAssignment) {
+        this.manageVariableAssignment(node);
+        this.advance();
+      }
 
-            if (node.isVariableAssignment) {
-                this.manageVariableAssignment(node);
-                this.advance();
-            }
+      if (node.isFunctionDeclaration) {
+        await this.manageFunctionDeclaration(node);
+        this.advance();
+      }
 
-            if (node.isFunctionDeclaration) {
-                await this.manageFunctionDeclaration(node);
-                this.advance();
-            }
+      if (node.isFunctionCall && !node.isModuleAccessField && !node.isVariableDeclaration) {
+        this.manageFunctionCall(node);
+        this.advance();
+      }
 
-            if (node.isFunctionCall && !node.isModuleAccessField && !node.isVariableDeclaration) {
-                this.manageFunctionCall(node);
-                this.advance();
-            }
+      if (node.isFunctionReturn) {
+        this.manageFunctionReturn(node);
+        this.advance();
+      }
 
-            if (node.isFunctionReturn) {
-                this.manageFunctionReturn(node);
-                this.advance();
-            }
-
-        }
     }
+  }
 }
