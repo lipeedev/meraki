@@ -4,9 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "npx tsx src/index.ts",
-    "build": "npx tsx src/index.ts -o dist/index.js",
+    "build": "npx tsc",
     "lint": "npx eslint --fix src/**/*.ts",
     "prepare": "npx husky install",
     "commit": "git add . && npx git-cz"
@@ -25,6 +24,7 @@
     "cz-conventional-changelog": "^3.3.0",
     "eslint": "^8.52.0",
     "husky": "^8.0.3",
+    "lint-staged": "^15.0.2",
     "tsx": "^3.14.0"
   }
 }
