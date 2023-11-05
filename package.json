@@ -1,18 +1,30 @@
 {
   "name": "meraki-lang",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "0.1.0",
+  "description": "a programming language made for educational purposes",
+  "main": "dist/index.js",
   "scripts": {
+    "start": "node dist/index.js",
     "dev": "npx tsx src/index.ts",
     "build": "npx tsc",
     "lint": "npx eslint --fix src/**/*.ts",
     "prepare": "npx husky install",
     "commit": "git add . && npx git-cz"
   },
-  "keywords": [],
-  "author": "",
+  "bin": {
+    "meraki": "dist/index.js"
+  },
+  "keywords": [
+    "programming-language",
+    "meraki",
+    "meraki-lang"
+  ],
+  "author": "lipeedev",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lipeedev/meraki.git"
+  },
   "devDependencies": {
     "@commitlint/cli": "^18.2.0",
     "@commitlint/config-conventional": "^18.1.0",
