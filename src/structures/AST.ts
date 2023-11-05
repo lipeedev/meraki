@@ -39,6 +39,11 @@ export type FuncionReturnValue = {
   type: TokenType
 }
 
+export type CustomImportValue = {
+  path: string,
+  file: string
+}
+
 export interface ASTNode {
   isFunctionReturn?: boolean;
   isFunctionCall?: boolean;
@@ -46,12 +51,14 @@ export interface ASTNode {
   isFunctionDeclaration?: boolean;
   isVariableDeclaration?: boolean;
   isVariableAssignment?: boolean;
+  isCustomImport?: boolean;
   functionCallValue?: FunctionCallValue;
   moduleAccessFieldValue?: ModuleAccessFieldValue;
   functionDeclarationValue?: FunctionDeclarationValue;
   variableDeclarationValue?: VariableDeclarationValue;
   variableAssignmentValue?: VariableAssignmentValue;
   functionReturnValue?: FuncionReturnValue;
+  customImportValue?: CustomImportValue;
   line: number;
   column: number;
   localScope?: LocalScope;

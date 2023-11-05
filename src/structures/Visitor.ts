@@ -1,6 +1,7 @@
 import isArrayEquals from '../utils/isArrayEquals';
 import { sendError } from '../utils/sendError';
 import { ASTNode } from './AST';
+import { Lexer } from './Lexer';
 import { Parser } from './Parser';
 import { Token, TokenType } from './Token';
 
@@ -371,9 +372,23 @@ export class Visitor {
     }
   }
 
+  private async manageCustomImport(node: ASTNode) {
+
+    const lexer = new Lexer(node.customImportValue?.file!);
+    const parser = new Parser(lexer.lex());
+    const { importModules, astNodes } = await parser.parse();
+    this.importModules = [...new Set([...importModules, ...this.importModules!])];
+
+    const astNodesBefore = this.astNodes.slice(0, this.position);
+    const astNodesAfter = this.astNodes.slice(this.position + 1, this.astNodes.length);
+    this.astNodes = [...astNodesBefore, ...astNodes, ...astNodesAfter];
+    this.position -= 1;
+  }
+
   public async visit() {
     while (!this.isEndOfAST) {
       const node = this.getCurrentNode();
+
       if (node.isModuleAccessField) {
         this.manageModuleAccessField(node);
         this.advance();
@@ -404,6 +419,12 @@ export class Visitor {
         this.advance();
       }
 
+      if (node.isCustomImport) {
+        await this.manageCustomImport(node);
+        this.advance();
+      }
+
     }
+
   }
 }

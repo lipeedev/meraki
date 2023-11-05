@@ -1,5 +1,6 @@
 import "IO"
 import "String"
+import "./toLowerCase.mrk"
 
 function main() {
   var name = String.type
@@ -8,3 +9,4 @@ function main() {
 }
 
 main()
+toLowerCase()

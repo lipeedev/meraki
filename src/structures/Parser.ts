@@ -3,14 +3,20 @@ import { sendError } from '../utils/sendError';
 import { Token, TokenType } from './Token';
 import { ASTNode, ModuleAccessFieldValue } from './AST';
 import keywords from '../utils/keywords';
+import { readFile } from 'fs/promises';
 
 export class Parser {
   private internalPath = path.resolve(__dirname, '..', 'internal');
   private position = 0;
   private importModules: any[] = [];
   private astNodes: ASTNode[] = [];
+  private filePath?: string;
 
-  constructor(private tokens: Token[]) { }
+  constructor(private tokens: Token[], filePath?: string) {
+    if (filePath) {
+      this.filePath = path.dirname(path.resolve(filePath))
+    }
+  }
 
   private getNextToken(token: Token) {
     return this.tokens[this.tokens.indexOf(token) + 1] ?? this.tokens[this.tokens.indexOf(token)];
@@ -44,15 +50,33 @@ export class Parser {
       });
     }
 
-    const importName = nextToken.value;
-    const importModuleFile = await import(`${this.internalPath}/${importName}/main`).catch(() => null);
+    let importName = nextToken.value;
 
-    if (!importModuleFile) {
+    if (importName.endsWith('.mrk')) {
+      importName = path.resolve(this.filePath!, importName)
+    }
+
+    const importModuleFile = await import(`${this.internalPath}/${importName}/main`).catch(() => null);
+    const customImportFile = await readFile(importName).catch(() => null);
+
+    if (!importModuleFile && !customImportFile) {
       sendError({
         message: `Could not find module "${importName}"`,
         line: nextToken.line,
         column: nextToken.column
       });
+    }
+
+    if (customImportFile) {
+      return this.astNodes.push({
+        isCustomImport: true,
+        column: token.column,
+        line: token.line,
+        customImportValue: {
+          path: importName,
+          file: customImportFile.toString()
+        }
+      })
     }
 
     this.importModules.push({ name: importName, exports: importModuleFile });
