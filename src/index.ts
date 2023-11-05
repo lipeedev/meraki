@@ -1,14 +1,38 @@
-import * as fs from 'node:fs';
+import * as fs from 'node:fs/promises';
 import { Lexer } from './structures/Lexer';
 import { Parser } from './structures/Parser';
 import { Visitor } from './structures/Visitor';
+import { sendError } from './utils/sendError';
 
-const text = fs.readFileSync('./examples/main.mrk', 'utf-8');
+async function main() {
+  const filePath = process.argv[2]
 
-const lexer = new Lexer(text);
-const parser = new Parser(lexer.lex());
+  if (!filePath || process.argv.length < 3) {
+    sendError({
+      message: 'No file specified',
+      line: 0,
+      column: 0,
+    })
+  }
 
-parser.parse().then(({ astNodes, importModules }) => {
+  const text = await fs.readFile(filePath, 'utf-8').catch(() => null);
+
+  if (!text) {
+    sendError({
+      message: `File ${filePath} not found`,
+      line: 0,
+      column: 0,
+    })
+  }
+
+  const lexer = new Lexer(text!);
+  const parser = new Parser(lexer.lex(), filePath);
+
+  const { astNodes, importModules } = await parser.parse()
+
   const visitor = new Visitor(astNodes, importModules);
   visitor.visit();
-});
+
+}
+
+main();
