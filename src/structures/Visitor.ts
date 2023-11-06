@@ -75,7 +75,7 @@ export class Visitor {
         this.position++;
     }
 
-    private manageModuleAccessFieldFunctionCall(node: ASTNode, myModule: ImportModule) {
+    private async manageModuleAccessFieldFunctionCall(node: ASTNode, myModule: ImportModule) {
         const functionCall = myModule?.exports[node.moduleAccessFieldValue?.field as string] as (param: ModuleFunctionCallParams) => any;
 
         if (!functionCall) {
@@ -98,7 +98,7 @@ export class Visitor {
         let functionAfterCall;
 
         try {
-            functionAfterCall = functionCall({
+            functionAfterCall = await functionCall({
                 functionsReturn: this.functionReturnList,
                 variables: this.variables,
                 args: args!,
@@ -134,7 +134,7 @@ export class Visitor {
 
     }
 
-    private manageModuleAccessField(node: ASTNode) {
+    private async manageModuleAccessField(node: ASTNode) {
         const myModule = this.importModules?.find(mod => mod.name === node.moduleAccessFieldValue?.name);
         if (!myModule) {
             sendError({
@@ -147,7 +147,7 @@ export class Visitor {
         const isModuleAcessFieldFunctionCall = node.isFunctionCall && node.isModuleAccessField;
 
         if (isModuleAcessFieldFunctionCall) {
-            return this.manageModuleAccessFieldFunctionCall(node, myModule as ImportModule);
+            return await this.manageModuleAccessFieldFunctionCall(node, myModule as ImportModule);
         }
 
         const staticField = myModule?.exports[node.moduleAccessFieldValue?.field as string];
@@ -401,7 +401,7 @@ export class Visitor {
             const node = this.getCurrentNode();
 
             if (node.isModuleAccessField) {
-                this.manageModuleAccessField(node);
+                await this.manageModuleAccessField(node);
                 this.advance();
             }
 
