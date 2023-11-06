@@ -60,6 +60,10 @@ export class Lexer {
         return /\./.test(char);
     }
 
+    private isComma(char: string): boolean {
+        return /,/.test(char);
+    }
+
     private skipWhitespace(): void {
         while (this.isWhitespace(this.currentChar)) {
             this.advance();
@@ -145,6 +149,11 @@ export class Lexer {
         this.addToken(TokenType.RightCurly, '}');
     }
 
+    private lexComma(): void {
+        this.advance();
+        this.addToken(TokenType.Comma, ',');
+    }
+
     public lex(): Token[] {
         while (!this.isEOF) {
             if (this.isWhitespace(this.currentChar)) {
@@ -197,6 +206,11 @@ export class Lexer {
 
             if (this.isEquals(this.currentChar)) {
                 this.lexEquals();
+                continue;
+            }
+
+            if (this.isComma(this.currentChar)) {
+                this.lexComma();
                 continue;
             }
 

@@ -220,25 +220,45 @@ export class Parser {
         const parameters: Token[] = [];
 
         while (nextToken.type !== TokenType.RightParen) {
-            switch (nextToken.type) {
-            case TokenType.String:
-            case TokenType.Identifier:
-                parameters.push(nextToken);
-                nextToken = this.getNextToken(nextToken);
-                break;
+            const previousToken = this.getPreviousToken(nextToken);
 
-            default:
+            if (nextToken.type === TokenType.Comma) {
+
+                if (!this.isValidType(previousToken) || !this.isValidType(this.getNextToken(nextToken))) {
+                    sendError({
+                        message: `Expected a valid argument, got "${nextToken.value}" instead`,
+                        line: nextToken.line,
+                        column: nextToken.column
+                    });
+                }
+
+                nextToken = this.getNextToken(nextToken);
+                continue;
+            }
+
+            if (!this.isValidType(nextToken)) {
                 sendError({
-                    message: `Expected a valid argument after "(", got "${nextToken.value}" instead`,
+                    message: `Expected a valid argument, got "${nextToken.value}" instead`,
                     line: nextToken.line,
                     column: nextToken.column
                 });
             }
+
+            if (previousToken.type !== TokenType.LeftParen && previousToken.type !== TokenType.Comma) {
+                sendError({
+                    message: `Expected "," got "${previousToken.value}" instead`,
+                    line: previousToken.line,
+                    column: previousToken.column
+                });
+            }
+
+            parameters.push(nextToken);
+            nextToken = this.getNextToken(nextToken);
         }
 
         if (nextToken.type !== TokenType.RightParen) {
             sendError({
-                message: `Expected ")" after "(", got "${nextToken.value}" instead`,
+                message: `Expected ")", got "${nextToken.value}" instead`,
                 line: nextToken.line,
                 column: nextToken.column
             });
@@ -303,22 +323,21 @@ export class Parser {
             };
 
             this.parseFunctionCall(nextTokenAfterDot, moduleAccessFieldValue);
+            return;
+        }
 
-        }
-        else {
-            this.astNodes.push({
-                isModuleAccessField: true,
-                isFunctionCall: false,
-                column: token.column,
-                line: token.line,
-                localScope: token.localScope,
-                moduleAccessFieldValue: {
-                    name: token.value,
-                    field: nextTokenAfterDot.value,
-                    isFunctionCall: true
-                }
-            });
-        }
+        this.astNodes.push({
+            isModuleAccessField: true,
+            isFunctionCall: false,
+            column: token.column,
+            line: token.line,
+            localScope: token.localScope,
+            moduleAccessFieldValue: {
+                name: token.value,
+                field: nextTokenAfterDot.value,
+                isFunctionCall: true
+            }
+        });
 
     }
 
