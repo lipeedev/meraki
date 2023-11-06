@@ -34,6 +34,10 @@ export class Parser {
         this.position++;
     }
 
+    private isValidType(token: Token) {
+        return [TokenType.String, TokenType.Number, TokenType.Boolean, TokenType.Identifier].includes(token.type);
+    }
+
     private isImport(token: Token) {
         return token.type === TokenType.Identifier && token.value === keywords.importDeclaration;
     }
@@ -97,7 +101,7 @@ export class Parser {
 
         const nextToken = this.getNextToken(token);
 
-        if (![TokenType.Identifier, TokenType.String].includes(nextToken.type)) {
+        if (!this.isValidType(nextToken)) {
             sendError({
                 message: `Expected a valid value after "${keywords.functionReturn}", got "${nextToken.value}" instead`,
                 line: nextToken.line,
@@ -337,7 +341,7 @@ export class Parser {
 
         const nextTokenAfterEquals = this.getNextToken(nextTokenAfterName);
 
-        if ([TokenType.Identifier, TokenType.String].indexOf(nextTokenAfterEquals.type) === -1) {
+        if (!this.isValidType(nextTokenAfterEquals)) {
             sendError({
                 message: `Expected a valid value after "=", got "${nextTokenAfterEquals.value}" instead`,
                 line: nextTokenAfterEquals.line,
@@ -385,7 +389,7 @@ export class Parser {
         const equalsToken = this.getNextToken(token);
         const nextTokenAfterEquals = this.getNextToken(equalsToken);
 
-        if ([TokenType.Identifier, TokenType.String].indexOf(nextTokenAfterEquals.type) === -1) {
+        if (!this.isValidType(nextTokenAfterEquals)) {
             sendError({
                 message: `Expected a valid value after "=", got "${nextTokenAfterEquals.value}" instead`,
                 line: nextTokenAfterEquals.line,

@@ -1,3 +1,4 @@
+import keywords from '../utils/keywords';
 import { sendError } from '../utils/sendError';
 import { Token, TokenType } from './Token';
 
@@ -51,6 +52,10 @@ export class Lexer {
         return /\n/.test(char);
     }
 
+    private isNumberChar(char: string): boolean {
+        return /[0-9]/.test(char);
+    }
+
     private isDot(char: string): boolean {
         return /\./.test(char);
     }
@@ -67,6 +72,26 @@ export class Lexer {
         while (this.isIdentifierChar(this.currentChar)) {
             value += this.currentChar;
             this.advance();
+        }
+
+        if (this.isNumberChar(value[0]) && isNaN(Number(value))) {
+            sendError({
+                message: 'Invalid identifier',
+                line: this.line,
+                column: this.column
+            });
+
+            return;
+        }
+
+        if (!isNaN(Number(value))) {
+            this.addToken(TokenType.Number, value);
+            return;
+        }
+
+        if (keywords.boolean.includes(value)) {
+            this.addToken(TokenType.Boolean, value);
+            return;
         }
 
         this.addToken(TokenType.Identifier, value);

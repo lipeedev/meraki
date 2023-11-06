@@ -3,4 +3,5 @@ export default {
     functionDeclaration: 'function',
     functionReturn: 'return',
     importDeclaration: 'import',
+    boolean: ['true', 'false'],
 };

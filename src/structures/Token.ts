@@ -1,12 +1,14 @@
 export enum TokenType {
-  Identifier,
-  String,
-  LeftParen,
-  RightParen,
-  LeftCurly,
-  RightCurly,
-  Dot,
-  Equals
+  Identifier = 'Identifier',
+  String = 'String',
+  LeftParen = 'LeftParen',
+  RightParen = 'RightParen',
+  LeftCurly = 'LeftCurly',
+  RightCurly = 'RightCurly',
+  Dot = 'Dot',
+  Equals = 'Equals',
+  Boolean = 'Boolean',
+  Number = 'Number',
 }
 
 export type LocalScope = {
