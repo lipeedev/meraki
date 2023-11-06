@@ -397,14 +397,28 @@ export class Parser {
             });
         }
 
+        let value = nextTokenAfterEquals.value;
+        let isFunctionCall = false;
+
+        if (nextTokenAfterEquals.type === TokenType.Identifier && this.isModuleAccessField(nextTokenAfterEquals)) {
+            const nextTokenAfterDot = this.getNextToken(this.getNextToken(nextTokenAfterEquals));
+
+            if (this.isModuleFunctionCall(nextTokenAfterDot)) {
+                isFunctionCall = true;
+            }
+
+            value = nextTokenAfterDot.value;
+        }
+
         this.astNodes.push({
             isVariableAssignment: true,
             column: token.column,
             line: token.line,
+            isFunctionCall,
             localScope: token.localScope,
             variableAssignmentValue: {
                 name: token.value,
-                value: nextTokenAfterEquals.value,
+                value,
                 type: nextTokenAfterEquals.type
             }
         });

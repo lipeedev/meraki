@@ -248,8 +248,10 @@ export class Visitor {
         if (node.variableAssignmentValue?.type === TokenType.Identifier) {
             const variableToAssign = this.variables.find(variable => variable.name === node.variableAssignmentValue?.value);
             const functionReturnToAssign = this.functionReturnList.find(functionReturn => functionReturn.variableFunction?.name === node.variableAssignmentValue?.value);
+            const isVariableFunctionModule = this.importModules?.some(mod => mod.exports[node.variableAssignmentValue?.value as string]);
+            const isVariableFunctionDeclaration = this.functionDeclarationList.some(func => func.name === node.variableAssignmentValue?.value);
 
-            if (!variableToAssign && !functionReturnToAssign) {
+            if (!variableToAssign && !functionReturnToAssign && !isVariableFunctionModule && !isVariableFunctionDeclaration) {
                 return sendError({
                     message: `"${node.variableAssignmentValue?.value}" not found`,
                     line: node.line,
@@ -257,20 +259,29 @@ export class Visitor {
                 });
             }
 
-            const value = variableToAssign?.value ?? functionReturnToAssign?.returnValue;
+            if (!isVariableFunctionModule && !isVariableFunctionDeclaration) {
+                const value = variableToAssign?.value ?? functionReturnToAssign?.returnValue;
+                const isFunctionCall = variableToAssign?.isFunctionCall ?? true;
+                const type = variableToAssign?.type ?? TokenType.Identifier;
 
-            if (functionReturnToAssign) {
-                const indexOfTheFunction = this.functionReturnList.indexOf(functionReturnToAssign);
-                const variableFunctionReferences = functionReturnToAssign.variableFunction?.references ?? [];
+                if (functionReturnToAssign) {
+                    const indexOfTheFunction = this.functionReturnList.indexOf(functionReturnToAssign);
+                    const variableFunctionReferences = functionReturnToAssign.variableFunction?.references ?? [];
 
-        this.functionReturnList[indexOfTheFunction]!.variableFunction!
-            .references = [node.variableAssignmentValue?.name!, ...variableFunctionReferences];
+          this.functionReturnList[indexOfTheFunction]!.variableFunction!
+              .references = [node.variableAssignmentValue?.name!, ...variableFunctionReferences];
+                }
 
-        variable.isFunctionCall = true;
+                variable.value = value;
+                variable.type = type;
+                variable.isFunctionCall = isFunctionCall;
+                return;
             }
 
-            variable.value = value;
-            return;
+            if (isVariableFunctionDeclaration) {
+                node.isFunctionCall = true;
+            }
+
         }
 
         variable.value = node.variableAssignmentValue?.value!;
