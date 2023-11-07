@@ -10,6 +10,7 @@ export enum TokenType {
   Boolean = 'Boolean',
   Number = 'Number',
   Comma = 'Comma',
+  Array = 'Array',
 }
 
 export type LocalScope = {
