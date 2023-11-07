@@ -4,3 +4,4 @@ export * from './trim';
 export * from './format';
 export * from './capitalize';
 export * from './length';
+export * from './chars';
