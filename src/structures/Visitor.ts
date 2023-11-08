@@ -121,7 +121,7 @@ export class Visitor {
             };
         }
 
-        if (functionAfterCall?.returnValue) {
+        if (functionAfterCall?.returnValue !== undefined) {
             this.functionReturnList.push({
                 name: node.functionCallValue?.name!,
                 line: node.line,
