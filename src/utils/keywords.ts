@@ -3,5 +3,6 @@ export default {
     functionDeclaration: 'function',
     functionReturn: 'return',
     importDeclaration: 'import',
+    exportDeclaration: 'public',
     boolean: ['true', 'false'],
 };

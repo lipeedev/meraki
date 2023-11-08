@@ -386,13 +386,24 @@ export class Visitor {
     private async manageCustomImport(node: ASTNode) {
 
         const lexer = new Lexer(node.customImportValue?.file!);
-        const parser = new Parser(lexer.lex());
+        const parser = new Parser(lexer.lex(), node.customImportValue?.path);
+
         const { importModules, astNodes } = await parser.parse();
-        this.importModules = [...new Set([...importModules, ...this.importModules!])];
+        const exportedNodes = astNodes.filter(_node => _node.isExportAllowed);
+
+        if (!exportedNodes.length) {
+            return sendError({
+                message: `"${node.customImportValue?.path}" has no exported fields`,
+                line: node.line,
+                column: node.column
+            });
+        }
 
         const astNodesBefore = this.astNodes.slice(0, this.position);
         const astNodesAfter = this.astNodes.slice(this.position + 1, this.astNodes.length);
-        this.astNodes = [...astNodesBefore, ...astNodes, ...astNodesAfter];
+
+        this.importModules = [...new Set([...importModules, ...this.importModules!])];
+        this.astNodes = [...astNodesBefore, ...exportedNodes, ...astNodesAfter];
         this.position -= 1;
     }
 

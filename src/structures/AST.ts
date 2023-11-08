@@ -45,6 +45,7 @@ export type CustomImportValue = {
 }
 
 export interface ASTNode {
+  isExportAllowed?: boolean;
   isFunctionReturn?: boolean;
   isFunctionCall?: boolean;
   isModuleAccessField?: boolean;

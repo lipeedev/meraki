@@ -44,6 +44,7 @@ export class Parser {
 
     private async parseImport(token: Token) {
         const nextToken = this.getNextToken(token);
+        const previousToken = this.getPreviousToken(token);
 
         if (nextToken.type !== TokenType.String) {
             sendError({
@@ -72,7 +73,10 @@ export class Parser {
         }
 
         if (customImportFile) {
+            const isExportAllowed = previousToken.value === keywords.exportDeclaration;
+
             return this.astNodes.push({
+                isExportAllowed,
                 isCustomImport: true,
                 column: token.column,
                 line: token.line,
@@ -123,16 +127,17 @@ export class Parser {
     }
 
     private isFunctionDefinition(token: Token) {
-        return token.type === TokenType.Identifier && token.value === 'function';
+        return token.type === TokenType.Identifier && token.value === keywords.functionDeclaration;
     }
 
     private parseFunctionDefinition(token: Token) {
 
         const nextToken = this.getNextToken(token);
+        const previousToken = this.getPreviousToken(token);
 
         if (nextToken.type !== TokenType.Identifier) {
             sendError({
-                message: `Expected identifier after "function" keyword, got "${nextToken.value}" instead`,
+                message: `Expected identifier after "${keywords.functionDeclaration}" keyword, got "${nextToken.value}" instead`,
                 line: nextToken.line,
                 column: nextToken.column
             });
@@ -195,7 +200,10 @@ export class Parser {
             }
         });
 
+        const isExportAllowed = previousToken.value === keywords.exportDeclaration;
+
         this.astNodes.push({
+            isExportAllowed,
             isFunctionDeclaration: true,
             localScope: nextToken.localScope,
             column: nextToken.column,
@@ -443,6 +451,23 @@ export class Parser {
         });
     }
 
+    private isExportDeclaration(token: Token) {
+        return token.value === keywords.exportDeclaration;
+    }
+
+    private parseExportDeclaration(token: Token) {
+        const nextToken = this.getNextToken(token);
+        const validValuesToBeExported = [keywords.importDeclaration, keywords.functionDeclaration];
+
+        if (!validValuesToBeExported.includes(nextToken.value)) {
+            return sendError({
+                message: `expected a valid value (${validValuesToBeExported}) after "${keywords.exportDeclaration}", but got "${nextToken.value}" instead`,
+                line: nextToken.line,
+                column: nextToken.column
+            });
+        }
+    }
+
     public async parse() {
         while (!this.isEndOfTokens) {
             const currentToken = this.tokens[this.position];
@@ -473,6 +498,10 @@ export class Parser {
 
             else if (this.isFunctionReturn(currentToken)) {
                 this.parseFunctionReturn(currentToken);
+            }
+
+            else if (this.isExportDeclaration(currentToken)) {
+                this.parseExportDeclaration(currentToken);
             }
 
             this.advance();
