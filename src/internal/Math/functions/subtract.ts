@@ -58,9 +58,9 @@ export function subtract({ args, line, column, variables, functionsReturn }: Mod
 
     let subtract = Number(args[0].value);
 
-    args.forEach((arg, index) => {
-        if (index !== 0) subtract -= Number(arg.value);
-    });
+    for (let i = 1; i < args.length; i++) {
+        subtract -= Number(args[i].value);
+    }
 
     return {
         type: TokenType.Number,
