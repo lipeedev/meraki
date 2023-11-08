@@ -1,0 +1,9 @@
+import "IO"
+import "Math"
+
+function sum() {
+  var calc = Math.sum(1, 1)
+  IO.print(calc)
+}
+
+sum()
