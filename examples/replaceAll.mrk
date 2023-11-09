@@ -1,0 +1,9 @@
+import "IO"
+import "String"
+
+function replaceAll() {
+  var replace = String.replaceAll("Hello wolrd, Hello wolrd", "lr", "rl")
+  IO.print(replace)
+}
+
+replaceAll()
