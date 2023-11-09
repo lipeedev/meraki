@@ -5,3 +5,5 @@ export * from './format';
 export * from './capitalize';
 export * from './length';
 export * from './chars';
+export * from './replace';
+export * from './replaceAll';

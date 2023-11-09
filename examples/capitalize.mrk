@@ -1,0 +1,9 @@
+import "IO"
+import "String"
+
+function capitalize() {
+  var cap = String.capitalize("hElLo WoRlD")
+  IO.print(cap)
+}
+
+capitalize()
