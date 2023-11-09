@@ -40,6 +40,7 @@ export type FunctionReturnData = {
 export type ModuleFunctionCallParams = {
   functionsDeclaration: FunctionDeclaration[]
   functionsReturn: FunctionReturnData[],
+  importModules: ImportModule[],
   variables: Variable[],
   args: Token[],
   line: number,
@@ -101,6 +102,7 @@ export class Visitor {
 
         try {
             functionAfterCall = await functionCall({
+                importModules: this.importModules!,
                 functionsDeclaration: this.functionDeclarationList,
                 functionsReturn: this.functionReturnList,
                 variables: this.variables,
@@ -443,6 +445,15 @@ export class Visitor {
       node.functionReturnValue!.value = variable.value;
       node.functionReturnValue!.type = variable.type;
         }
+
+        this.functionReturnList.push({
+            name: node.functionReturnValue?.value!,
+            line: node.line,
+            column: node.column,
+            returnValue: node.functionReturnValue?.value,
+            type: node.functionReturnValue?.type
+        });
+
     }
 
     private async manageCustomImport(node: ASTNode) {
