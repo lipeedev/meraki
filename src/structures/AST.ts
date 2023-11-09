@@ -8,7 +8,8 @@ export enum ASTNodeType {
 
 export type FunctionDeclarationValue = {
   name: string,
-  body: Token[]
+  body: Token[],
+  parameters: Token[]
 }
 
 export type FunctionCallValue = {

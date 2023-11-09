@@ -38,6 +38,7 @@ export type FunctionReturnData = {
 }
 
 export type ModuleFunctionCallParams = {
+  functionsDeclaration: FunctionDeclaration[]
   functionsReturn: FunctionReturnData[],
   variables: Variable[],
   args: Token[],
@@ -46,17 +47,18 @@ export type ModuleFunctionCallParams = {
 }
 
 export class Visitor {
-    private variables: Variable[] = [];
+    private variables: Variable[];
     private functionReturnList: FunctionReturnData[] = [];
     private functionDeclarationList: FunctionDeclaration[] = [];
     private astNodes: ASTNode[];
     private importModules?: ImportModule[];
     private position = 0;
 
-    constructor(astNodes: ASTNode[], importModules?: ImportModule[], functionDeclarationList?: FunctionDeclaration[]) {
+    constructor(astNodes: ASTNode[], importModules?: ImportModule[], functionDeclarationList?: FunctionDeclaration[], variables?: Variable[]) {
         this.astNodes = astNodes;
         this.importModules = importModules;
         this.functionDeclarationList = functionDeclarationList ?? [];
+        this.variables = variables ?? [];
     }
 
     private get isEndOfAST() {
@@ -99,6 +101,7 @@ export class Visitor {
 
         try {
             functionAfterCall = await functionCall({
+                functionsDeclaration: this.functionDeclarationList,
                 functionsReturn: this.functionReturnList,
                 variables: this.variables,
                 args: args!,
@@ -304,6 +307,7 @@ export class Visitor {
         this.functionDeclarationList.push({
             name: node.functionDeclarationValue?.name!,
             body: functionBodyParsed.astNodes,
+            args: node.functionDeclarationValue?.parameters
         });
 
         const firstNodeOutsideFunctionBody = this.astNodes.find((_node, index) => _node.localScope?.name !== node.functionDeclarationValue?.name && index > this.astNodes.indexOf(node));
@@ -318,6 +322,7 @@ export class Visitor {
 
     private manageFunctionCall(node: ASTNode) {
         const functionDeclaration = this.functionDeclarationList.find(func => func.name === node.functionCallValue?.name);
+        let parameters: Variable[] | undefined;
 
         if (!functionDeclaration) {
             return sendError({
@@ -325,6 +330,63 @@ export class Visitor {
                 line: node.line,
                 column: node.column
             });
+        }
+
+        if (functionDeclaration.args?.length) {
+
+            if (functionDeclaration.args?.length !== node.functionCallValue?.args.length) {
+                return sendError({
+                    message: `function "${functionDeclaration.name} expect ${functionDeclaration.args?.length} arguments, but got ${node.functionCallValue?.args.length} instead`,
+                    line: node.line,
+                    column: node.column
+                });
+            }
+
+            parameters = functionDeclaration.args.map((arg, index) => {
+                if (node.functionCallValue?.args[index].type === TokenType.Identifier) {
+                    const variable = this.variables.find(variable => variable.name === node.functionCallValue?.args[index].value);
+                    const functionReturn = this.functionReturnList.find(functionReturn => functionReturn.variableFunction?.name === node.functionCallValue?.args[index].value);
+
+                    if (!variable && !functionReturn) {
+                        sendError({
+                            message: `"${node.functionCallValue?.args[index].value}" not found`,
+                            line: node.line,
+                            column: node.column
+                        });
+                    }
+
+                    if (variable && variable.isFunctionCall) {
+                        const functionFound = this.functionReturnList.find(functionReturn => functionReturn.name === variable.value && (functionReturn.variableFunction?.name === variable.name || functionReturn?.variableFunction?.references?.includes(variable.name)));
+
+                        variable.value = functionFound?.returnValue;
+                        variable.type = functionFound?.type!;
+                        variable.isFunctionCall = false;
+                    }
+
+                    else if (functionReturn) {
+                        const indexOfTheFunction = this.functionReturnList.indexOf(functionReturn);
+                        const variableFunctionReferences = functionReturn.variableFunction?.references ?? [];
+
+            this.functionReturnList[indexOfTheFunction]!.variableFunction!
+                .references = [arg.value!, ...variableFunctionReferences];
+                    }
+
+                    return {
+                        name: arg.value!,
+                        value: variable?.value ?? functionReturn?.returnValue,
+                        type: variable?.type! ?? functionReturn?.type!,
+                        isFunctionCall: variable?.isFunctionCall ?? true
+                    };
+                }
+
+                return {
+                    name: arg.value,
+                    value: node.functionCallValue?.args[index].value!,
+                    type: node.functionCallValue?.args[index].type!,
+                    isFunctionCall: false
+                };
+            });
+
         }
 
         const functionReturn = functionDeclaration.body.find(token => token.isFunctionReturn);
@@ -340,7 +402,7 @@ export class Visitor {
 
             functionDeclaration.body = functionDeclaration.body.slice(0, functionDeclaration.body.indexOf(functionReturn) + 1);
 
-            new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList).visit();
+            new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList, parameters).visit();
 
             this.functionReturnList.push({
                 name: node.functionCallValue?.name!,
@@ -354,7 +416,7 @@ export class Visitor {
             return;
         }
 
-        new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList).visit();
+        new Visitor(functionDeclaration.body, this.importModules, this.functionDeclarationList, parameters).visit();
     }
 
     private manageFunctionReturn(node: ASTNode) {
@@ -445,8 +507,8 @@ export class Visitor {
                 await this.manageCustomImport(node);
                 this.advance();
             }
-
         }
 
+        return { returnList: this.functionReturnList };
     }
 }

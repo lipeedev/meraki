@@ -153,17 +153,56 @@ export class Parser {
             });
         }
 
-        const nextTokenAfterLeftParen = this.getNextToken(nextTokenAfterName);
+        let currentTokenInsideParen = this.getNextToken(nextTokenAfterName);
 
-        if (nextTokenAfterLeftParen.type !== TokenType.RightParen) {
+        const parameters: Token[] = [];
+
+        while (currentTokenInsideParen.type !== TokenType.RightParen) {
+            const previousTokenFromCurrent = this.getPreviousToken(currentTokenInsideParen);
+
+            if (currentTokenInsideParen.type === TokenType.Comma) {
+
+                if (previousTokenFromCurrent.type !== TokenType.Identifier || this.getNextToken(currentTokenInsideParen).type !== TokenType.Identifier) {
+                    sendError({
+                        message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                        line: currentTokenInsideParen.line,
+                        column: currentTokenInsideParen.column
+                    });
+                }
+
+                currentTokenInsideParen = this.getNextToken(currentTokenInsideParen);
+                continue;
+            }
+
+            if (currentTokenInsideParen.type !== TokenType.Identifier) {
+                sendError({
+                    message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                    line: nextToken.line,
+                    column: nextToken.column
+                });
+            }
+
+            if (previousTokenFromCurrent.type !== TokenType.LeftParen && previousTokenFromCurrent.type !== TokenType.Comma) {
+                sendError({
+                    message: `Expected "," got "${previousTokenFromCurrent.value}" instead`,
+                    line: previousTokenFromCurrent.line,
+                    column: previousTokenFromCurrent.column
+                });
+            }
+
+            parameters.push(currentTokenInsideParen);
+            currentTokenInsideParen = this.getNextToken(currentTokenInsideParen);
+        }
+
+        if (currentTokenInsideParen.type !== TokenType.RightParen) {
             sendError({
-                message: `Expected ")" after "(", got "${nextTokenAfterLeftParen.value}" instead`,
-                line: nextTokenAfterLeftParen.line,
-                column: nextTokenAfterLeftParen.column
+                message: `Expected ")", got "${currentTokenInsideParen.value}" instead`,
+                line: nextToken.line,
+                column: nextToken.column
             });
         }
 
-        const nextTokenAfterRightParen = this.getNextToken(nextTokenAfterLeftParen);
+        const nextTokenAfterRightParen = this.getNextToken(currentTokenInsideParen);
 
         if (nextTokenAfterRightParen.type !== TokenType.LeftCurly) {
             sendError({
@@ -210,7 +249,8 @@ export class Parser {
             line: nextToken.line,
             functionDeclarationValue: {
                 name: nextToken.value,
-                body: functionBodyTokens
+                body: functionBodyTokens,
+                parameters
             }
         });
 
