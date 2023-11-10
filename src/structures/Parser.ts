@@ -164,7 +164,7 @@ export class Parser {
 
                 if (previousTokenFromCurrent.type !== TokenType.Identifier || this.getNextToken(currentTokenInsideParen).type !== TokenType.Identifier) {
                     sendError({
-                        message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                        message: `a Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
                         line: currentTokenInsideParen.line,
                         column: currentTokenInsideParen.column
                     });
@@ -176,21 +176,39 @@ export class Parser {
 
             if (currentTokenInsideParen.type !== TokenType.Identifier) {
                 sendError({
-                    message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                    message: `b Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
                     line: nextToken.line,
                     column: nextToken.column
                 });
             }
 
-            if (previousTokenFromCurrent.type !== TokenType.LeftParen && previousTokenFromCurrent.type !== TokenType.Comma) {
+            const primitiveTypes = [TokenType.String, TokenType.Number, TokenType.Boolean];
+
+            if (primitiveTypes.includes(currentTokenInsideParen.value as TokenType)) {
+
+                if (![TokenType.LeftParen, TokenType.Comma].includes(previousTokenFromCurrent.type) || this.getNextToken(currentTokenInsideParen).type !== TokenType.Colon) {
+                    sendError({
+                        message: `c Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                        line: currentTokenInsideParen.line,
+                        column: currentTokenInsideParen.column
+                    });
+                }
+
+                currentTokenInsideParen = this.getNextToken(this.getNextToken(currentTokenInsideParen));
+                continue;
+            }
+
+            if (previousTokenFromCurrent.type !== TokenType.Colon && !primitiveTypes.includes(this.getPreviousToken(previousTokenFromCurrent).value as TokenType) && ![TokenType.Comma, TokenType.RightParen].includes(this.getNextToken(currentTokenInsideParen).type)) {
                 sendError({
-                    message: `Expected "," got "${previousTokenFromCurrent.value}" instead`,
-                    line: previousTokenFromCurrent.line,
-                    column: previousTokenFromCurrent.column
+                    message: `d Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                    line: currentTokenInsideParen.line,
+                    column: currentTokenInsideParen.column
                 });
             }
 
-            parameters.push(currentTokenInsideParen);
+            const type = this.getPreviousToken(previousTokenFromCurrent).value as TokenType;
+
+            parameters.push({ ...currentTokenInsideParen, type });
             currentTokenInsideParen = this.getNextToken(currentTokenInsideParen);
         }
 

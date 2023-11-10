@@ -11,6 +11,7 @@ export enum TokenType {
   Number = 'Number',
   Comma = 'Comma',
   Array = 'Array',
+  Colon = 'Colon',
 }
 
 export type LocalScope = {
