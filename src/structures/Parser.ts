@@ -97,7 +97,7 @@ export class Parser {
     private parseFunctionReturn(token: Token) {
         if (!token.localScope) {
             sendError({
-                message: 'You can\'t return outside a function',
+                message: `You can't return outside a ${keywords.functionDeclaration}`,
                 line: token.line,
                 column: token.column
             });
@@ -147,7 +147,7 @@ export class Parser {
 
         if (nextTokenAfterName.type !== TokenType.LeftParen) {
             sendError({
-                message: `Expected "(" after function name, got "${nextTokenAfterName.value}" instead`,
+                message: `Expected "(" after ${keywords.functionDeclaration} name, got "${nextTokenAfterName.value}" instead`,
                 line: nextTokenAfterName.line,
                 column: nextTokenAfterName.column
             });
@@ -214,7 +214,7 @@ export class Parser {
 
         if (token.localScope) {
             sendError({
-                message: `You cannot create nested functions "${nextToken.value}"`,
+                message: `You cannot create a nested ${keywords.functionDeclaration} "${nextToken.value}"`,
                 line: nextToken.line,
                 column: nextToken.column
             });
