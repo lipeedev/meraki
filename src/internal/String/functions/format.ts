@@ -48,6 +48,8 @@ export function format({ args, line, column, variables, functionsReturn }: Modul
 
     args.forEach((arg, index) => {
         if (index !== 0) {
+            let value = arg.value;
+
             if (arg.type === TokenType.Identifier) {
                 const variable = variables.find(variable => variable.name === arg.value);
                 const returnVariable = functionsReturn.find(variable => variable.name === arg.value);
@@ -62,15 +64,15 @@ export function format({ args, line, column, variables, functionsReturn }: Modul
 
                 if (variable && variable.isFunctionCall) {
                     const functionFound = functionsReturn.find(functionReturn => functionReturn.name === variable.value && (functionReturn.variableFunction?.name === variable.name || functionReturn?.variableFunction?.references?.includes(variable.name)));
-                    arg.value = functionFound?.returnValue!;
+                    value = functionFound?.returnValue!;
                 }
 
                 else {
-                    arg.value = variable?.value ?? returnVariable?.returnValue;
+                    value = variable?.value ?? returnVariable?.returnValue;
                 }
             }
 
-            stringValue = stringValue.replace('{}', arg.value);
+            stringValue = stringValue.replace('{}', value);
         }
     });
 
