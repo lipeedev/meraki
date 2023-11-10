@@ -1,12 +1,17 @@
-import "IO"
-import "String"
-import "./toLowerCase.mrk"
+import "./all.mrk"
 
-function main() {
-  var name = String.type
-  
-  IO.print(name)
+task main() {
+  def name = String.type
+  IO.scan("What's your name? ", name)
+
+  def result = String.format("hi, my name is {}", name)
+  def length = String.length(name)
+
+  def chars = String.chars(name)
+
+  IO.print(result)
+  IO.print("length: ", length)
+  IO.print(chars)
 }
 
 main()
-toLowerCase()

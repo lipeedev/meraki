@@ -1,0 +1,8 @@
+import "IO"
+import "String"
+
+public task toLowerCase() {
+  def lower = String.toLowerCase("HELLO WORLD!")
+  IO.print(lower)
+}
+

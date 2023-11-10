@@ -1,0 +1,9 @@
+import "IO"
+import "String"
+
+public task trim() {
+  def trim = String.trim("   Hello world!   ")
+  IO.print(trim)
+}
+
+trim()

@@ -1,0 +1,7 @@
+import "IO"
+import "String"
+
+public task capitalize() {
+  def name = String.capitalize("filipe")
+  IO.print(name)
+}

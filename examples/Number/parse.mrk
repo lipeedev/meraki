@@ -1,0 +1,7 @@
+import "Number"
+import "IO"
+
+public task parse() {
+  def result = Number.parse("5.4")
+  IO.print(result)
+}

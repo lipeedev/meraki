@@ -1,0 +1,9 @@
+import "IO"
+import "String"
+
+public task replace() {
+  def replace = String.replace("Hello wolrd", "lr", "rl")
+  IO.print(replace)
+}
+
+replace()

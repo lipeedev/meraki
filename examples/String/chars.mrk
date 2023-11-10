@@ -1,0 +1,8 @@
+import "IO"
+import "String"
+
+public task chars() {
+  def letters = String.chars("hello")
+  IO.print(letters)
+}
+

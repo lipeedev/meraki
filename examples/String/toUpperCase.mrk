@@ -1,0 +1,9 @@
+import "IO"
+import "String"
+
+public task toUpperCase() {
+  def upper = String.toUpperCase("hello world!")
+  IO.print(upper)
+}
+
+toUpperCase()

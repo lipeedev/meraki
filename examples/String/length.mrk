@@ -1,0 +1,8 @@
+import "IO"
+import "String"
+
+public task length() {
+  def length = String.length("hello world")
+  IO.print(length)
+}
+
