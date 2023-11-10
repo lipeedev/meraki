@@ -446,7 +446,9 @@ export class Visitor {
 
         if (returnValue?.type === TokenType.Identifier) {
             const variable = this.variables.find(variable => variable.name === returnValue?.value);
-            if (!variable) {
+            const functionReturn = this.functionReturnList.find(functionReturn => functionReturn.variableFunction?.name === returnValue?.value);
+
+            if (!variable && !functionReturn) {
                 return sendError({
                     message: `"${returnValue?.value}" not found`,
                     line: node.line,
@@ -454,16 +456,25 @@ export class Visitor {
                 });
             }
 
-            if (variable.type !== TokenType.String) {
-                sendError({
-                    message: 'Expected a valid return type',
-                    column: node.column,
-                    line: node.line
-                });
+            if (variable && variable.isFunctionCall) {
+                const functionFound = this.functionReturnList.find(functionReturn => functionReturn.name === variable.value && (functionReturn.variableFunction?.name === variable.name || functionReturn?.variableFunction?.references?.includes(variable.name)));
+
+                variable.value = functionFound?.returnValue;
+                variable.type = functionFound?.type!;
+                variable.isFunctionCall = false;
             }
 
-      node.functionReturnValue!.value = variable.value;
-      node.functionReturnValue!.type = variable.type;
+            else if (functionReturn) {
+                const indexOfTheFunction = this.functionReturnList.indexOf(functionReturn);
+                const variableFunctionReferences = functionReturn.variableFunction?.references ?? [];
+
+        this.functionReturnList[indexOfTheFunction]!.variableFunction!
+            .references = [node.functionReturnValue?.value!, ...variableFunctionReferences];
+            }
+
+      node.functionReturnValue!.value = variable?.value ?? functionReturn?.returnValue;
+      node.functionReturnValue!.type = variable?.type ?? functionReturn?.type!;
+
         }
 
         this.functionReturnList.push({
