@@ -1,6 +1,6 @@
 export default {
-    variableDeclaration: 'def',
-    functionDeclaration: 'task',
+    variableDeclaration: 'val',
+    functionDeclaration: 'defn',
     functionReturn: 'return',
     importDeclaration: 'import',
     exportDeclaration: 'public',
