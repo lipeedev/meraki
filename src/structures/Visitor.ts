@@ -110,7 +110,8 @@ export class Visitor {
                 line: node.line,
                 column: node.column
             });
-        } catch {
+        } catch (err) {
+            console.log(err);
             sendError({
                 message: `"${node.moduleAccessFieldValue?.field}" in module "${node.moduleAccessFieldValue?.name}" is not a function, remove the "()"`,
                 line: node.line,

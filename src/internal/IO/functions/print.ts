@@ -1,5 +1,6 @@
 import { TokenType } from '../../../structures/Token';
 import { ModuleFunctionCallParams } from '../../../structures/Visitor';
+import { convertObjToPrintableMap } from '../../../utils/convertObjToPrintableMap';
 import { sendError } from '../../../utils/sendError';
 
 const argsSize = 1;
@@ -31,6 +32,10 @@ export function print({ variables, functionsReturn, line, args, column }: Module
             }
 
             else if (variable) {
+                if (variable?.type === TokenType.Map) {
+                    variable.value = `Map(${Object.keys(variable.value).length}) ${convertObjToPrintableMap(variable.value)}`;
+                }
+
                 valuesToPrint.push(variable.value);
             }
 

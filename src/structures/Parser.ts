@@ -164,7 +164,7 @@ export class Parser {
 
                 if (previousTokenFromCurrent.type !== TokenType.Identifier || this.getNextToken(currentTokenInsideParen).type !== TokenType.Identifier) {
                     sendError({
-                        message: `a Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                        message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
                         line: currentTokenInsideParen.line,
                         column: currentTokenInsideParen.column
                     });
@@ -176,7 +176,7 @@ export class Parser {
 
             if (currentTokenInsideParen.type !== TokenType.Identifier) {
                 sendError({
-                    message: `b Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                    message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
                     line: nextToken.line,
                     column: nextToken.column
                 });
@@ -188,7 +188,7 @@ export class Parser {
 
                 if (![TokenType.LeftParen, TokenType.Comma].includes(previousTokenFromCurrent.type) || this.getNextToken(currentTokenInsideParen).type !== TokenType.Colon) {
                     sendError({
-                        message: `c Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                        message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
                         line: currentTokenInsideParen.line,
                         column: currentTokenInsideParen.column
                     });
@@ -198,9 +198,9 @@ export class Parser {
                 continue;
             }
 
-            if (previousTokenFromCurrent.type !== TokenType.Colon && !primitiveTypes.includes(this.getPreviousToken(previousTokenFromCurrent).value as TokenType) && ![TokenType.Comma, TokenType.RightParen].includes(this.getNextToken(currentTokenInsideParen).type)) {
+            if (previousTokenFromCurrent.type !== TokenType.Colon || !primitiveTypes.includes(this.getPreviousToken(previousTokenFromCurrent).value as TokenType) || ![TokenType.Comma, TokenType.RightParen].includes(this.getNextToken(currentTokenInsideParen).type)) {
                 sendError({
-                    message: `d Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                    message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
                     line: currentTokenInsideParen.line,
                     column: currentTokenInsideParen.column
                 });
@@ -426,7 +426,7 @@ export class Parser {
 
         const nextTokenAfterEquals = this.getNextToken(nextTokenAfterName);
 
-        if (!this.isValidType(nextTokenAfterEquals)) {
+        if (!this.isValidType(nextTokenAfterEquals) && nextTokenAfterEquals.type !== TokenType.Percent) {
             sendError({
                 message: `Expected a valid value after "=", got "${nextTokenAfterEquals.value}" instead`,
                 line: nextTokenAfterEquals.line,
@@ -436,6 +436,10 @@ export class Parser {
 
         let value = nextTokenAfterEquals.value;
         let isFunctionCall = false;
+
+        if (nextTokenAfterEquals.type === TokenType.Percent) {
+            return this.parseMap(nextTokenAfterEquals, nameToken);
+        }
 
         if (nextTokenAfterEquals.type === TokenType.Identifier && this.isModuleAccessField(nextTokenAfterEquals)) {
             const nextTokenAfterDot = this.getNextToken(this.getNextToken(nextTokenAfterEquals));
@@ -458,6 +462,88 @@ export class Parser {
                 name: nameToken.value,
                 value,
                 type: nextTokenAfterEquals.type
+            }
+        });
+    }
+
+    private parseMap(token: Token, nameToken: Token) {
+        const nextTokenAfterPercent = this.getNextToken(token);
+
+        if (nextTokenAfterPercent.type !== TokenType.LeftParen) {
+            sendError({
+                message: `Expected "(" after "%", got "${nextTokenAfterPercent.value}" instead`,
+                line: nextTokenAfterPercent.line,
+                column: nextTokenAfterPercent.column,
+            });
+        }
+
+        let currentTokenInsideParen = this.getNextToken(nextTokenAfterPercent);
+        const map: { [key: string]: any } = {};
+
+        while (currentTokenInsideParen.type !== TokenType.RightParen) {
+            const previousTokenFromCurrent = this.getPreviousToken(currentTokenInsideParen);
+
+            if (currentTokenInsideParen.type === TokenType.Comma) {
+                if (!this.isValidType(previousTokenFromCurrent) || this.getNextToken(currentTokenInsideParen).type !== TokenType.Identifier) {
+                    return sendError({
+                        message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                        line: currentTokenInsideParen.line,
+                        column: currentTokenInsideParen.column
+                    });
+                }
+
+                currentTokenInsideParen = this.getNextToken(currentTokenInsideParen);
+                continue;
+            }
+
+            if (!this.isValidType(currentTokenInsideParen)) {
+                return sendError({
+                    message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                    line: currentTokenInsideParen.line,
+                    column: currentTokenInsideParen.column
+                });
+            }
+
+            if (currentTokenInsideParen.type === TokenType.Identifier) {
+                if (![TokenType.LeftParen, TokenType.Comma].includes(previousTokenFromCurrent.type) || this.getNextToken(currentTokenInsideParen).type !== TokenType.Colon) {
+                    return sendError({
+                        message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                        line: currentTokenInsideParen.line,
+                        column: currentTokenInsideParen.column
+                    });
+                }
+
+                currentTokenInsideParen = this.getNextToken(this.getNextToken(currentTokenInsideParen));
+                continue;
+            }
+
+            if (previousTokenFromCurrent.type !== TokenType.Colon || !this.isValidType(this.getPreviousToken(previousTokenFromCurrent)) || ![TokenType.Comma, TokenType.RightParen].includes(this.getNextToken(currentTokenInsideParen).type)) {
+                sendError({
+                    message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                    line: currentTokenInsideParen.line,
+                    column: currentTokenInsideParen.column
+                });
+            }
+
+            const key = this.getPreviousToken(previousTokenFromCurrent).value;
+            map[key] = currentTokenInsideParen.value;
+
+            if (currentTokenInsideParen.type === TokenType.Number)
+                map[key] = Number(currentTokenInsideParen.value);
+
+            currentTokenInsideParen = this.getNextToken(currentTokenInsideParen);
+        }
+
+        return this.astNodes.push({
+            isVariableDeclaration: true,
+            isFunctionCall: false,
+            column: token.column,
+            line: token.line,
+            localScope: token.localScope,
+            variableDeclarationValue: {
+                name: nameToken.value,
+                value: map,
+                type: TokenType.Map
             }
         });
     }

@@ -25,7 +25,7 @@ export type ModuleAccessFieldValue = {
 
 export type VariableDeclarationValue = {
   name: string,
-  value: string,
+  value: any,
   type: TokenType
 }
 

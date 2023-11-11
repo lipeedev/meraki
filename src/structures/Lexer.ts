@@ -68,6 +68,10 @@ export class Lexer {
         return char === ':';
     }
 
+    private isPercent(char: string): boolean {
+        return char === '%';
+    }
+
     private skipWhitespace(): void {
         while (this.isWhitespace(this.currentChar)) {
             this.advance();
@@ -163,6 +167,11 @@ export class Lexer {
         this.addToken(TokenType.Comma, ',');
     }
 
+    private lexPercent(): void {
+        this.advance();
+        this.addToken(TokenType.Percent, '%');
+    }
+
     public lex(): Token[] {
         while (!this.isEOF) {
             if (this.isWhitespace(this.currentChar)) {
@@ -225,6 +234,11 @@ export class Lexer {
 
             if (this.isColon(this.currentChar)) {
                 this.lexColon();
+                continue;
+            }
+
+            if (this.isPercent(this.currentChar)) {
+                this.lexPercent();
                 continue;
             }
 
