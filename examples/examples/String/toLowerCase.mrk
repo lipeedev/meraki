@@ -1,0 +1,7 @@
+import "IO"
+import "String"
+
+public defn toLowerCase() {
+  val lower = String.toLowerCase("HELLO WORLD!")
+  IO.print(lower)
+}

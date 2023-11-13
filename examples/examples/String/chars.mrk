@@ -1,0 +1,7 @@
+import "IO"
+import "String"
+
+public defn chars() {
+  val letters = String.chars("hello")
+  IO.print(letters)
+}
