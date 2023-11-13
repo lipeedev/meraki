@@ -1,0 +1,7 @@
+import "IO"
+import "String"
+
+public defn trim() {
+  val trim = String.trim("   Hello world!   ")
+  IO.print(trim)
+}

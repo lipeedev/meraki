@@ -1,0 +1,18 @@
+import "./all.mrk"
+
+create()
+map()
+print()
+scan()
+subtract()
+sum()
+parse()
+capitalize()
+chars()
+format()
+length()
+replace()
+replaceAll()
+toLowerCase()
+toUpperCase()
+trim()

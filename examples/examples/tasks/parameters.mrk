@@ -1,0 +1,7 @@
+import "IO"
+
+public defn example(String: name) {
+  IO.print("hello ", name)
+}
+
+example("lipe")
