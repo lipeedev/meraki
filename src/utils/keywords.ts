@@ -1,6 +1,6 @@
 export default {
-    variableDeclaration: 'var',
-    functionDeclaration: 'function',
+    variableDeclaration: 'val',
+    functionDeclaration: 'defn',
     functionReturn: 'return',
     importDeclaration: 'import',
     exportDeclaration: 'public',

@@ -1,9 +1,0 @@
-import "IO"
-import "String"
-
-function length() {
-  var length = String.sdl("Hello world!")
-  IO.print(length)
-}
-
-length()

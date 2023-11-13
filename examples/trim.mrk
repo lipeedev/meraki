@@ -1,9 +1,0 @@
-import "IO"
-import "String"
-
-function trim() {
-  var trim = String.trim("   Hello world!   ")
-  IO.print(trim)
-}
-
-trim()

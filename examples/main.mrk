@@ -1,12 +1,18 @@
-import "IO"
-import "String"
-import "./toLowerCase.mrk"
+import "./all.mrk"
 
-function main() {
-  var name = String.type
-  
-  IO.print(name)
-}
-
-main()
+create()
+map()
+print()
+scan()
+subtract()
+sum()
+parse()
+capitalize()
+chars()
+format()
+length()
+replace()
+replaceAll()
 toLowerCase()
+toUpperCase()
+trim()

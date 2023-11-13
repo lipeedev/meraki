@@ -37,7 +37,7 @@ export class Lexer {
     }
 
     private isEquals(char: string): boolean {
-        return /=/.test(char);
+        return char === '=';
     }
 
     private isStringChar(char: string): boolean {
@@ -45,11 +45,11 @@ export class Lexer {
     }
 
     private isWhitespace(char: string): boolean {
-        return / /.test(char);
+        return char === ' ' || char === '\t';
     }
 
     private isNewLine(char: string): boolean {
-        return /\n/.test(char);
+        return char === '\n';
     }
 
     private isNumberChar(char: string): boolean {
@@ -57,11 +57,19 @@ export class Lexer {
     }
 
     private isDot(char: string): boolean {
-        return /\./.test(char);
+        return char === '.';
     }
 
     private isComma(char: string): boolean {
-        return /,/.test(char);
+        return char === ',';
+    }
+
+    private isColon(char: string): boolean {
+        return char === ':';
+    }
+
+    private isPercent(char: string): boolean {
+        return char === '%';
     }
 
     private skipWhitespace(): void {
@@ -104,6 +112,11 @@ export class Lexer {
     private lexEquals(): void {
         this.advance();
         this.addToken(TokenType.Equals, '=');
+    }
+
+    private lexColon(): void {
+        this.advance();
+        this.addToken(TokenType.Colon, ':');
     }
 
     private lexString(): void {
@@ -152,6 +165,11 @@ export class Lexer {
     private lexComma(): void {
         this.advance();
         this.addToken(TokenType.Comma, ',');
+    }
+
+    private lexPercent(): void {
+        this.advance();
+        this.addToken(TokenType.Percent, '%');
     }
 
     public lex(): Token[] {
@@ -211,6 +229,16 @@ export class Lexer {
 
             if (this.isComma(this.currentChar)) {
                 this.lexComma();
+                continue;
+            }
+
+            if (this.isColon(this.currentChar)) {
+                this.lexColon();
+                continue;
+            }
+
+            if (this.isPercent(this.currentChar)) {
+                this.lexPercent();
                 continue;
             }
 

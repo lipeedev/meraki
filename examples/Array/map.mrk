@@ -1,0 +1,14 @@
+import "Array"
+import "IO"
+import "String"
+
+public defn callback(String: element, Number: index) {
+  val output = String.format("Element {} -> {}", index, element)
+ 
+  return output
+}
+
+val array = Array.create("hello", "world")
+val arrayMapped = Array.map(array, callback)
+
+IO.print(arrayMapped)

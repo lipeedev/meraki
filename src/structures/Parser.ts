@@ -97,7 +97,7 @@ export class Parser {
     private parseFunctionReturn(token: Token) {
         if (!token.localScope) {
             sendError({
-                message: 'You can\'t return outside a function',
+                message: `You can't return outside a ${keywords.functionDeclaration}`,
                 line: token.line,
                 column: token.column
             });
@@ -147,7 +147,7 @@ export class Parser {
 
         if (nextTokenAfterName.type !== TokenType.LeftParen) {
             sendError({
-                message: `Expected "(" after function name, got "${nextTokenAfterName.value}" instead`,
+                message: `Expected "(" after ${keywords.functionDeclaration} name, got "${nextTokenAfterName.value}" instead`,
                 line: nextTokenAfterName.line,
                 column: nextTokenAfterName.column
             });
@@ -182,15 +182,33 @@ export class Parser {
                 });
             }
 
-            if (previousTokenFromCurrent.type !== TokenType.LeftParen && previousTokenFromCurrent.type !== TokenType.Comma) {
+            const primitiveTypes = [TokenType.String, TokenType.Number, TokenType.Boolean];
+
+            if (primitiveTypes.includes(currentTokenInsideParen.value as TokenType)) {
+
+                if (![TokenType.LeftParen, TokenType.Comma].includes(previousTokenFromCurrent.type) || this.getNextToken(currentTokenInsideParen).type !== TokenType.Colon) {
+                    sendError({
+                        message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                        line: currentTokenInsideParen.line,
+                        column: currentTokenInsideParen.column
+                    });
+                }
+
+                currentTokenInsideParen = this.getNextToken(this.getNextToken(currentTokenInsideParen));
+                continue;
+            }
+
+            if (previousTokenFromCurrent.type !== TokenType.Colon || !primitiveTypes.includes(this.getPreviousToken(previousTokenFromCurrent).value as TokenType) || ![TokenType.Comma, TokenType.RightParen].includes(this.getNextToken(currentTokenInsideParen).type)) {
                 sendError({
-                    message: `Expected "," got "${previousTokenFromCurrent.value}" instead`,
-                    line: previousTokenFromCurrent.line,
-                    column: previousTokenFromCurrent.column
+                    message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                    line: currentTokenInsideParen.line,
+                    column: currentTokenInsideParen.column
                 });
             }
 
-            parameters.push(currentTokenInsideParen);
+            const type = this.getPreviousToken(previousTokenFromCurrent).value as TokenType;
+
+            parameters.push({ ...currentTokenInsideParen, type });
             currentTokenInsideParen = this.getNextToken(currentTokenInsideParen);
         }
 
@@ -214,7 +232,7 @@ export class Parser {
 
         if (token.localScope) {
             sendError({
-                message: `You cannot create nested functions "${nextToken.value}"`,
+                message: `You cannot create a nested ${keywords.functionDeclaration} "${nextToken.value}"`,
                 line: nextToken.line,
                 column: nextToken.column
             });
@@ -408,7 +426,7 @@ export class Parser {
 
         const nextTokenAfterEquals = this.getNextToken(nextTokenAfterName);
 
-        if (!this.isValidType(nextTokenAfterEquals)) {
+        if (!this.isValidType(nextTokenAfterEquals) && nextTokenAfterEquals.type !== TokenType.Percent) {
             sendError({
                 message: `Expected a valid value after "=", got "${nextTokenAfterEquals.value}" instead`,
                 line: nextTokenAfterEquals.line,
@@ -418,6 +436,10 @@ export class Parser {
 
         let value = nextTokenAfterEquals.value;
         let isFunctionCall = false;
+
+        if (nextTokenAfterEquals.type === TokenType.Percent) {
+            return this.parseMap(nextTokenAfterEquals, nameToken);
+        }
 
         if (nextTokenAfterEquals.type === TokenType.Identifier && this.isModuleAccessField(nextTokenAfterEquals)) {
             const nextTokenAfterDot = this.getNextToken(this.getNextToken(nextTokenAfterEquals));
@@ -440,6 +462,88 @@ export class Parser {
                 name: nameToken.value,
                 value,
                 type: nextTokenAfterEquals.type
+            }
+        });
+    }
+
+    private parseMap(token: Token, nameToken: Token) {
+        const nextTokenAfterPercent = this.getNextToken(token);
+
+        if (nextTokenAfterPercent.type !== TokenType.LeftParen) {
+            sendError({
+                message: `Expected "(" after "%", got "${nextTokenAfterPercent.value}" instead`,
+                line: nextTokenAfterPercent.line,
+                column: nextTokenAfterPercent.column,
+            });
+        }
+
+        let currentTokenInsideParen = this.getNextToken(nextTokenAfterPercent);
+        const map: { [key: string]: any } = {};
+
+        while (currentTokenInsideParen.type !== TokenType.RightParen) {
+            const previousTokenFromCurrent = this.getPreviousToken(currentTokenInsideParen);
+
+            if (currentTokenInsideParen.type === TokenType.Comma) {
+                if (!this.isValidType(previousTokenFromCurrent) || this.getNextToken(currentTokenInsideParen).type !== TokenType.Identifier) {
+                    return sendError({
+                        message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                        line: currentTokenInsideParen.line,
+                        column: currentTokenInsideParen.column
+                    });
+                }
+
+                currentTokenInsideParen = this.getNextToken(currentTokenInsideParen);
+                continue;
+            }
+
+            if (!this.isValidType(currentTokenInsideParen)) {
+                return sendError({
+                    message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                    line: currentTokenInsideParen.line,
+                    column: currentTokenInsideParen.column
+                });
+            }
+
+            if (currentTokenInsideParen.type === TokenType.Identifier) {
+                if (![TokenType.LeftParen, TokenType.Comma].includes(previousTokenFromCurrent.type) || this.getNextToken(currentTokenInsideParen).type !== TokenType.Colon) {
+                    return sendError({
+                        message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                        line: currentTokenInsideParen.line,
+                        column: currentTokenInsideParen.column
+                    });
+                }
+
+                currentTokenInsideParen = this.getNextToken(this.getNextToken(currentTokenInsideParen));
+                continue;
+            }
+
+            if (previousTokenFromCurrent.type !== TokenType.Colon || !this.isValidType(this.getPreviousToken(previousTokenFromCurrent)) || ![TokenType.Comma, TokenType.RightParen].includes(this.getNextToken(currentTokenInsideParen).type)) {
+                sendError({
+                    message: `Expected a valid argument, got "${currentTokenInsideParen.value}" instead`,
+                    line: currentTokenInsideParen.line,
+                    column: currentTokenInsideParen.column
+                });
+            }
+
+            const key = this.getPreviousToken(previousTokenFromCurrent).value;
+            map[key] = currentTokenInsideParen.value;
+
+            if (currentTokenInsideParen.type === TokenType.Number)
+                map[key] = Number(currentTokenInsideParen.value);
+
+            currentTokenInsideParen = this.getNextToken(currentTokenInsideParen);
+        }
+
+        return this.astNodes.push({
+            isVariableDeclaration: true,
+            isFunctionCall: false,
+            column: token.column,
+            line: token.line,
+            localScope: token.localScope,
+            variableDeclarationValue: {
+                name: nameToken.value,
+                value: map,
+                type: TokenType.Map
             }
         });
     }

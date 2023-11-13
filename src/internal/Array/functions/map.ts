@@ -95,10 +95,28 @@ export async function map({ args, line, column, variables, functionsReturn, func
             boolean: TokenType.Boolean,
         };
 
+        const typeOfInputArrayValue = types[typeof value as keyof typeof types];
+
+        if (typeOfInputArrayValue !== functionDeclaration.args?.[0]?.type) {
+            return sendError({
+                message: `map() callback expected ${typeOfInputArrayValue} as first argument, got ${functionDeclaration.args?.[0].type}`,
+                line: secondArg.line,
+                column: secondArg.column
+            });
+        }
+
+        if (functionDeclaration.args?.[1]?.type !== TokenType.Number) {
+            return sendError({
+                message: `map() callback expected ${TokenType.Number} as second argument, got ${functionDeclaration.args?.[1].type}`,
+                line: secondArg.line,
+                column: secondArg.column
+            });
+        }
+
         const parameterValue: Variable = {
             name: functionDeclaration?.args?.[0]?.value!,
             value,
-            type: types[typeof value as keyof typeof types],
+            type: typeOfInputArrayValue,
         };
 
         const parameterIndex: Variable = {

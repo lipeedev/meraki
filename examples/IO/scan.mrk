@@ -1,0 +1,8 @@
+import "IO"
+
+public defn scan() {
+  val name = ""
+
+  IO.scan("type your name here: ", name)
+  IO.print(name)
+}

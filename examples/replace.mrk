@@ -1,9 +1,0 @@
-import "IO"
-import "String"
-
-function replace() {
-  var replace = String.replace("Hello wolrd", "lr", "rl")
-  IO.print(replace)
-}
-
-replace()

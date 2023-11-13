@@ -1,0 +1,7 @@
+import "IO"
+import "String"
+
+public defn replaceAll() {
+  val replace = String.replaceAll("Hello wolrd, Hello wolrd", "lr", "rl")
+  IO.print(replace)
+}

@@ -83,7 +83,7 @@ export class Visitor {
 
         if (!functionCall) {
             sendError({
-                message: `Function "${node.moduleAccessFieldValue?.field}" not found in module "${node.moduleAccessFieldValue?.name}"`,
+                message: `"${node.moduleAccessFieldValue?.field}" not found in module "${node.moduleAccessFieldValue?.name}"`,
                 line: node.line,
                 column: node.column
             });
@@ -110,7 +110,8 @@ export class Visitor {
                 line: node.line,
                 column: node.column
             });
-        } catch {
+        } catch (err) {
+            console.log(err);
             sendError({
                 message: `"${node.moduleAccessFieldValue?.field}" in module "${node.moduleAccessFieldValue?.name}" is not a function, remove the "()"`,
                 line: node.line,
@@ -328,7 +329,7 @@ export class Visitor {
 
         if (!functionDeclaration) {
             return sendError({
-                message: `Function "${node.functionCallValue?.name}" not found`,
+                message: `"${node.functionCallValue?.name}" not found`,
                 line: node.line,
                 column: node.column
             });
@@ -338,13 +339,14 @@ export class Visitor {
 
             if (functionDeclaration.args?.length !== node.functionCallValue?.args.length) {
                 return sendError({
-                    message: `function "${functionDeclaration.name} expect ${functionDeclaration.args?.length} arguments, but got ${node.functionCallValue?.args.length} instead`,
+                    message: `"${functionDeclaration.name} expect ${functionDeclaration.args?.length} arguments, but got ${node.functionCallValue?.args.length} instead`,
                     line: node.line,
                     column: node.column
                 });
             }
 
             parameters = functionDeclaration.args.map((arg, index) => {
+
                 if (node.functionCallValue?.args[index].type === TokenType.Identifier) {
                     const variable = this.variables.find(variable => variable.name === node.functionCallValue?.args[index].value);
                     const functionReturn = this.functionReturnList.find(functionReturn => functionReturn.variableFunction?.name === node.functionCallValue?.args[index].value);
@@ -373,12 +375,31 @@ export class Visitor {
                 .references = [arg.value!, ...variableFunctionReferences];
                     }
 
+                    const value = variable?.value ?? functionReturn?.returnValue;
+                    const type = variable?.type ?? functionReturn?.type!;
+
+                    if (type !== arg.type) {
+                        sendError({
+                            message: `"${functionDeclaration.name}" expect ${arg.type} as argument ${index + 1}, but got ${type} instead`,
+                            line: node.line,
+                            column: node.column
+                        });
+                    }
+
                     return {
                         name: arg.value!,
-                        value: variable?.value ?? functionReturn?.returnValue,
-                        type: variable?.type! ?? functionReturn?.type!,
+                        type,
+                        value,
                         isFunctionCall: variable?.isFunctionCall ?? true
                     };
+                }
+
+                if (arg.type !== node.functionCallValue?.args[index].type) {
+                    sendError({
+                        message: `"${functionDeclaration.name}" expect ${arg.type} as argument ${index + 1}, but got ${node.functionCallValue?.args[index].type} instead`,
+                        line: node.line,
+                        column: node.column
+                    });
                 }
 
                 return {
@@ -426,7 +447,9 @@ export class Visitor {
 
         if (returnValue?.type === TokenType.Identifier) {
             const variable = this.variables.find(variable => variable.name === returnValue?.value);
-            if (!variable) {
+            const functionReturn = this.functionReturnList.find(functionReturn => functionReturn.variableFunction?.name === returnValue?.value);
+
+            if (!variable && !functionReturn) {
                 return sendError({
                     message: `"${returnValue?.value}" not found`,
                     line: node.line,
@@ -434,16 +457,25 @@ export class Visitor {
                 });
             }
 
-            if (variable.type !== TokenType.String) {
-                sendError({
-                    message: 'Expected a valid return type',
-                    column: node.column,
-                    line: node.line
-                });
+            if (variable && variable.isFunctionCall) {
+                const functionFound = this.functionReturnList.find(functionReturn => functionReturn.name === variable.value && (functionReturn.variableFunction?.name === variable.name || functionReturn?.variableFunction?.references?.includes(variable.name)));
+
+                variable.value = functionFound?.returnValue;
+                variable.type = functionFound?.type!;
+                variable.isFunctionCall = false;
             }
 
-      node.functionReturnValue!.value = variable.value;
-      node.functionReturnValue!.type = variable.type;
+            else if (functionReturn) {
+                const indexOfTheFunction = this.functionReturnList.indexOf(functionReturn);
+                const variableFunctionReferences = functionReturn.variableFunction?.references ?? [];
+
+        this.functionReturnList[indexOfTheFunction]!.variableFunction!
+            .references = [node.functionReturnValue?.value!, ...variableFunctionReferences];
+            }
+
+      node.functionReturnValue!.value = variable?.value ?? functionReturn?.returnValue;
+      node.functionReturnValue!.type = variable?.type ?? functionReturn?.type!;
+
         }
 
         this.functionReturnList.push({
