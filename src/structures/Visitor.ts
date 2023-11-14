@@ -1,3 +1,4 @@
+import getTokenTypeFromValue from '../utils/getTokenTypeFromValue';
 import isArrayEquals from '../utils/isArrayEquals';
 import { sendError } from '../utils/sendError';
 import { ASTNode } from './AST';
@@ -110,8 +111,7 @@ export class Visitor {
                 line: node.line,
                 column: node.column
             });
-        } catch (err) {
-            console.log(err);
+        } catch {
             sendError({
                 message: `"${node.moduleAccessFieldValue?.field}" in module "${node.moduleAccessFieldValue?.name}" is not a function, remove the "()"`,
                 line: node.line,
@@ -142,12 +142,26 @@ export class Visitor {
 
     private async manageModuleAccessField(node: ASTNode) {
         const myModule = this.importModules?.find(mod => mod.name === node.moduleAccessFieldValue?.name);
-        if (!myModule) {
+        const mapVariable = this.variables.find(variable => variable.name === node.moduleAccessFieldValue?.name) as { [key: string]: any };
+
+        if (!myModule && !mapVariable) {
             sendError({
-                message: `Module ${node.moduleAccessFieldValue?.name} not found`,
+                message: `Module/Variable ${node.moduleAccessFieldValue?.name} not found`,
                 line: node.line,
                 column: node.column
             });
+        }
+
+        if (mapVariable) {
+            if (this.getPreviousNode().isVariableDeclaration || this.getPreviousNode().isVariableAssignment) {
+                const indexOfVariableToAssign = this.variables.findIndex(variable => variable.name === (this.getPreviousNode().variableDeclarationValue?.name ?? this.getPreviousNode().variableAssignmentValue?.name));
+
+                this.variables[indexOfVariableToAssign].value = mapVariable.value[node.moduleAccessFieldValue?.field!];
+                this.variables[indexOfVariableToAssign].type = getTokenTypeFromValue(mapVariable.value[node.moduleAccessFieldValue?.field!]);
+
+            }
+
+            return mapVariable;
         }
 
         const isModuleAcessFieldFunctionCall = node.isFunctionCall && node.isModuleAccessField;
@@ -191,8 +205,9 @@ export class Visitor {
             const functionReturnToAssign = this.functionReturnList.find(functionReturn => functionReturn.variableFunction?.name === node.variableDeclarationValue?.value);
             const isVariableFunctionModule = this.importModules?.some(mod => mod.exports[node.variableDeclarationValue?.value as string]);
             const isVariableFunctionDeclaration = this.functionDeclarationList.some(func => func.name === node.variableDeclarationValue?.value);
+            const mapVariable = this.variables.find(variable => variable.value[node.variableDeclarationValue?.value] !== undefined);
 
-            if (!isVariableFunctionDeclaration && !variableToAssign && !functionReturnToAssign && !isVariableFunctionModule) {
+            if (!isVariableFunctionDeclaration && !variableToAssign && !functionReturnToAssign && !isVariableFunctionModule && !mapVariable) {
                 return sendError({
                     message: `"${node.variableDeclarationValue?.value}" not found`,
                     line: node.line,
@@ -201,9 +216,9 @@ export class Visitor {
             }
 
             if (!isVariableFunctionModule && !isVariableFunctionDeclaration) {
-                const value = variableToAssign?.value ?? functionReturnToAssign?.returnValue;
-                const isFunctionCall = variableToAssign?.isFunctionCall ?? true;
-                const type = variableToAssign?.type ?? TokenType.Identifier;
+                const value = variableToAssign?.value ?? functionReturnToAssign?.returnValue ?? mapVariable?.value[node.variableDeclarationValue?.value];
+                const isFunctionCall = variableToAssign?.isFunctionCall ?? mapVariable?.isFunctionCall ?? true;
+                const type = variableToAssign?.type ?? getTokenTypeFromValue(mapVariable?.type) ?? TokenType.Identifier;
 
                 if (functionReturnToAssign) {
                     const indexOfTheFunction = this.functionReturnList.indexOf(functionReturnToAssign);

@@ -364,10 +364,11 @@ export class Parser {
 
         const importName = token.value;
         const importModuleFile = await import(`${this.internalPath}/${importName}/main`).catch(() => null);
+        const variableMap = this.astNodes.find(variable => variable.variableDeclarationValue?.value === nextTokenAfterDot.value);
 
-        if (!importModuleFile) {
+        if (!importModuleFile && !variableMap) {
             sendError({
-                message: `Could not find module "${importName}"`,
+                message: `Could not find module/variable "${importName}"`,
                 line: nextToken.line,
                 column: nextToken.column
             });
