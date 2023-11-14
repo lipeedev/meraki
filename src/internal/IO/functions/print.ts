@@ -28,6 +28,10 @@ export function print({ variables, functionsReturn, line, args, column }: Module
                     functionFound.returnValue = `Array(${functionFound.returnValue.length}) %{ ${functionFound.returnValue.map((value: unknown[]) => typeof value === 'string' ? `'${value}'` : value).join(', ')} }`;
                 }
 
+                if (functionFound?.type === TokenType.Map) {
+                    functionFound.returnValue = `Map(${Object.keys(functionFound.returnValue).length}) ${convertObjToPrintableMap(functionFound.returnValue)}`;
+                }
+
                 valuesToPrint.push(functionFound?.returnValue!);
             }
 
@@ -40,6 +44,14 @@ export function print({ variables, functionsReturn, line, args, column }: Module
             }
 
             else if (functionReturn) {
+                if (functionReturn?.type === TokenType.Map) {
+                    functionReturn.returnValue = `Map(${Object.keys(functionReturn.returnValue).length}) ${convertObjToPrintableMap(functionReturn.returnValue)}`;
+                }
+
+                if (functionReturn?.type === TokenType.Array) {
+                    functionReturn.returnValue = `Array(${functionReturn.returnValue.length}) %{ ${functionReturn.returnValue.map((value: unknown[]) => typeof value === 'string' ? `'${value}'` : value).join(', ')} }`;
+                }
+
                 valuesToPrint.push(functionReturn.returnValue);
             }
 

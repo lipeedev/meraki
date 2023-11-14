@@ -157,7 +157,7 @@ export class Visitor {
                 const indexOfVariableToAssign = this.variables.findIndex(variable => variable.name === (this.getPreviousNode().variableDeclarationValue?.name ?? this.getPreviousNode().variableAssignmentValue?.name));
 
                 this.variables[indexOfVariableToAssign].value = mapVariable.value[node.moduleAccessFieldValue?.field!];
-                this.variables[indexOfVariableToAssign].type = getTokenTypeFromValue(mapVariable.value[node.moduleAccessFieldValue?.field!]);
+                this.variables[indexOfVariableToAssign].type = getTokenTypeFromValue(mapVariable.value[node.moduleAccessFieldValue?.field!]) as TokenType;
 
             }
 
