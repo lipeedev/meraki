@@ -1,5 +1,8 @@
 import "./all.mrk"
 
+/ it is a comment :)
+/ yeah!! 
+
 defn main() {
   val name = String.type
   IO.scan("What's your name? ", name)

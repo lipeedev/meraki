@@ -72,6 +72,10 @@ export class Lexer {
         return char === '%';
     }
 
+    private isComment(char: string): boolean {
+        return char === '/';
+    }
+
     private skipWhitespace(): void {
         while (this.isWhitespace(this.currentChar)) {
             this.advance();
@@ -172,10 +176,21 @@ export class Lexer {
         this.addToken(TokenType.Percent, '%');
     }
 
+    private lexComment() {
+        while (!this.isNewLine(this.currentChar)) {
+            this.advance();
+        }
+    }
+
     public lex(): Token[] {
         while (!this.isEOF) {
             if (this.isWhitespace(this.currentChar)) {
                 this.skipWhitespace();
+                continue;
+            }
+
+            if (this.isComment(this.currentChar)) {
+                this.lexComment();
                 continue;
             }
 
