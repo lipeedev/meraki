@@ -1,7 +1,7 @@
 import "IO"
 
-public task print() {
-  def string = "Hello world!"
+public defn print() {
+  val string = "Hello world!"
   IO.print(string)
 }
 

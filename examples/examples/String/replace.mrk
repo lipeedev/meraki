@@ -1,7 +1,7 @@
 import "IO"
 import "String"
 
-public defn replace() {
+public valn replace() {
   val replace = String.replace("Hello wolrd", "lr", "rl")
   IO.print(replace)
 }

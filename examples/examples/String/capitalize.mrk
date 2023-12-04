@@ -1,7 +1,7 @@
 import "IO"
 import "String"
 
-public defn capitalize() {
+public valn capitalize() {
   val name = String.capitalize("filipe")
   IO.print(name)
 }

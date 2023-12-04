@@ -1,8 +1,8 @@
 import "IO"
 import "String"
 
-public task replaceAll() {
-  def replace = String.replaceAll("Hello wolrd, Hello wolrd", "lr", "rl")
+public defn replaceAll() {
+  val replace = String.replaceAll("Hello wolrd, Hello wolrd", "lr", "rl")
   IO.print(replace)
 }
 

@@ -1,6 +1,6 @@
 import "IO"
 
-public defn scan() {
+public valn scan() {
   val name = ""
 
   IO.scan("type your name here: ", name)

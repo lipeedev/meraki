@@ -1,6 +1,6 @@
 import "IO"
 
-public task example(String: name) {
+public defn example(String: name) {
   IO.print("hello ", name)
 }
 

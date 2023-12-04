@@ -1,7 +1,7 @@
 import "IO"
 import "Array"
 
-public defn create() {
+public valn create() {
   val array = Array.create("hello", "world")
   IO.print(array)
 }

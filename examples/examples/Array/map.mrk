@@ -2,7 +2,7 @@ import "Array"
 import "IO"
 import "String"
 
-public defn callback(String: element, Number: index) {
+public valn callback(String: element, Number: index) {
   val output = String.format("Element {} -> {}", index, element)
  
   return output

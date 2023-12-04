@@ -1,15 +1,13 @@
 import "./all.mrk"
 
-task main() {
-  def name = String.type
+defn main() {
+  val name = String.type
   IO.scan("What's your name? ", name)
 
-  def result = String.format("hi, my name is {}", name)
-  def length = String.length(name)
+  val length = String.length(name)
+  val chars = String.chars(name)
 
-  def chars = String.chars(name)
-
-  IO.print(result)
+  IO.printf("hi, my name is {}", name)
   IO.print("length: ", length)
   IO.print(chars)
 }

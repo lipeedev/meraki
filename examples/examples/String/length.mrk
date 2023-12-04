@@ -1,7 +1,7 @@
 import "IO"
 import "String"
 
-public defn length() {
+public valn length() {
   val length = String.length("hello world")
   IO.print(length)
 }

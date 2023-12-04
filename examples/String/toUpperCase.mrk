@@ -1,8 +1,8 @@
 import "IO"
 import "String"
 
-public task toUpperCase() {
-  def upper = String.toUpperCase("hello world!")
+public defn toUpperCase() {
+  val upper = String.toUpperCase("hello world!")
   IO.print(upper)
 }
 

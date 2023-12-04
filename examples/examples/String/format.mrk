@@ -1,7 +1,7 @@
 import "String"
 import "IO"
 
-public defn format() {
+public valn format() {
   val result = String.format("hello {}", "world")
   IO.print(result)
 }

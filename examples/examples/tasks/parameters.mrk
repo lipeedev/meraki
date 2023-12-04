@@ -1,6 +1,6 @@
 import "IO"
 
-public defn example(String: name) {
+public valn example(String: name) {
   IO.print("hello ", name)
 }
 

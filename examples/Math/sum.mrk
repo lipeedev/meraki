@@ -1,8 +1,8 @@
 import "IO"
 import "Math"
 
-public task sum() {
-  def calc = Math.sum(1, 1)
+public defn sum() {
+  val calc = Math.sum(1, 1)
   IO.print(calc)
 }
 

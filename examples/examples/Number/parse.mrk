@@ -1,7 +1,7 @@
 import "Number"
 import "IO"
 
-public defn parse() {
+public valn parse() {
   val result = Number.parse("5.4")
   IO.print(result)
 }

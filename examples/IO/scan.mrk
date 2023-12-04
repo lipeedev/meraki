@@ -1,7 +1,7 @@
 import "IO"
 
-public task scan() {
-  def name = ""
+public defn scan() {
+  val name = ""
 
   IO.scan("type your name here: ", name)
   IO.print(name)

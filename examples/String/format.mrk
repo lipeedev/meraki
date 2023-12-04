@@ -1,7 +1,7 @@
 import "String"
 import "IO"
 
-public task format() {
-  def result = String.format("hello {}", "world")
+public defn format() {
+  val result = String.format("hello {}", "world")
   IO.print(result)
 }

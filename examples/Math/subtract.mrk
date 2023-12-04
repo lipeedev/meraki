@@ -1,8 +1,8 @@
 import "IO"
 import "Math"
 
-public task subtract() {
-  def calc = Math.subtract(1, 1)
+public defn subtract() {
+  val calc = Math.subtract(1, 1)
   IO.print(calc)
 }
 

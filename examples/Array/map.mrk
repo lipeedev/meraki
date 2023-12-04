@@ -2,13 +2,13 @@ import "Array"
 import "IO"
 import "String"
 
-task callback(String: element, Number: index) {
-  def output = String.format("Element {} -> {}", index, element)
+defn callback(String: element, Number: index) {
+  val output = String.format("Element {} -> {}", index, element)
  
   return output
 }
 
-def array = Array.create("hello", "world")
-def arrayMapped = Array.map(array, callback)
+val array = Array.create("hello", "world")
+val arrayMapped = Array.map(array, callback)
 
 IO.print(arrayMapped)

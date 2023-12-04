@@ -1,7 +1,7 @@
 import "IO"
 import "Math"
 
-public defn sum() {
+public valn sum() {
   val calc = Math.sum(1, 1)
   IO.print(calc)
 }
